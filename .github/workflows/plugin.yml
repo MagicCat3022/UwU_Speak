@@ -1,5 +1,6 @@
-# Tests the engine, checks that the Vencord plugin builds against current Vencord, and on a
-# version tag (v1.2.3) publishes a GitHub release with the plugin zip and the install scripts.
+# Tests the engine and the installer, runs the installer end to end on Windows, macOS and Linux
+# (building the plugin into current Vencord and Equicord and patching a fake Discord), and on a
+# version tag (v1.2.3) publishes a GitHub release with the plugin and the installers.
 name: Plugin
 
 on:
@@ -43,55 +44,110 @@ jobs:
             exit 1
           }
 
-      - name: Package the plugin
+      - name: Package the plugin and installers
         run: |
           mkdir -p release
-          (cd vencord && zip -r ../release/uwuSpeak.zip uwuSpeak)
-          cp install/install.ps1 install/install.sh release/
+          (cd vencord && zip -qr ../release/uwuSpeak.zip uwuSpeak && tar -czf ../release/uwuSpeak.tar.gz uwuSpeak)
+          cp install/installer.mjs install/install.ps1 install/install.sh install/UwUSpeak-Installer.cmd release/
+          (cd release && sha256sum -- * > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - uses: actions/upload-artifact@v7
         with:
           name: release
           path: release/
 
-  vencord-build:
-    runs-on: ubuntu-latest
+  installer:
     needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows, no git, PowerShell 5.1
+            os: windows-latest
+          - name: Linux, git, update and Equicord
+            os: ubuntu-latest
+          - name: macOS
+            os: macos-latest
+    name: Installer (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    env:
+      UWUSPEAK_PORTABLE_NODE: '1'
     steps:
       - uses: actions/checkout@v7
-        with:
-          repository: Vendicated/Vencord
-          path: Vencord
 
       - uses: actions/download-artifact@v8
         with:
           name: release
           path: release
 
-      - name: Install the packaged plugin
-        run: unzip -q release/uwuSpeak.zip -d Vencord/src/userplugins
-
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: Vencord/package.json
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: Vencord/pnpm-lock.yaml
-
-      - name: Build Vencord with the plugin
-        working-directory: Vencord
+      - name: Install into a fake Discord Canary (Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
         run: |
-          pnpm install --frozen-lockfile
-          pnpm build
-          grep -q UwUSpeak dist/renderer.js || { echo "::error::The plugin is missing from the build."; exit 1; }
+          node tests/installer-e2e.mjs fake "$env:LOCALAPPDATA\DiscordCanary\app-1.0.9\resources"
+          node tests/installer-e2e.mjs fake "$env:LOCALAPPDATA\DiscordCanary\app-1.0.10\resources"
+          $env:UWUSPEAK_INSTALLER = "$pwd\release\installer.mjs"
+          $env:UWUSPEAK_ARGS = "--yes --no-git --no-restart --target discord-canary --dir $env:RUNNER_TEMP\Vencord --plugin $pwd\release\uwuSpeak.tar.gz"
+          iex (Get-Content -Raw release\install.ps1)
+          if ($LASTEXITCODE -ne 0) { throw "Installer failed with $LASTEXITCODE" }
+          node tests/installer-e2e.mjs verify "$env:RUNNER_TEMP\Vencord" "$env:LOCALAPPDATA\DiscordCanary\app-1.0.10\resources" "$env:APPDATA\Vencord\settings\settings.json"
+          if ($LASTEXITCODE -ne 0) { throw 'Verification failed' }
+
+      - name: Install into a fake Discord (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          node tests/installer-e2e.mjs fake ~/.config/discord/app-0.0.120/resources
+          UWUSPEAK_INSTALLER="$PWD/release/installer.mjs" bash release/install.sh \
+            --yes --no-restart --target discord --dir "$RUNNER_TEMP/Vencord" --plugin "$PWD/release/uwuSpeak.tar.gz"
+          node tests/installer-e2e.mjs verify "$RUNNER_TEMP/Vencord" ~/.config/discord/app-0.0.120/resources ~/.config/Vencord/settings/settings.json
+
+      - name: Run again to update (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          UWUSPEAK_INSTALLER="$PWD/release/installer.mjs" bash release/install.sh \
+            --yes --no-restart --plugin "$PWD/release/uwuSpeak.tar.gz" | tee update.log
+          grep -q "Vencord built from" update.log
+          grep -q "Update UwUSpeak" update.log
+          node tests/installer-e2e.mjs verify "$RUNNER_TEMP/Vencord"
+
+      - name: Build into Equicord (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          UWUSPEAK_INSTALLER="$PWD/release/installer.mjs" bash release/install.sh \
+            --yes --target none --client equicord --dir "$RUNNER_TEMP/Equicord" --plugin "$PWD/release/uwuSpeak.tar.gz"
+          node tests/installer-e2e.mjs verify "$RUNNER_TEMP/Equicord"
+
+      - name: Drive the menus with the keyboard (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # Down arrow + Enter picks "Uninstall"; Enter then accepts the default folder and "yes".
+          { sleep 3; printf '\033[B'; sleep 1; printf '\r'; sleep 2; printf '\r'; sleep 1; printf 'n'; sleep 2; } |
+            script -qefc "node release/installer.mjs --dry-run" /dev/null | tee tui.log
+          grep -q "Uninstall UwUSpeak" tui.log
+          grep -q "Dry run: nothing was changed" tui.log
+
+      - name: Install into a fake Discord (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          node tests/installer-e2e.mjs fake ~/Applications/Discord.app/Contents/Resources
+          UWUSPEAK_INSTALLER="$PWD/release/installer.mjs" bash release/install.sh \
+            --yes --no-restart --target discord --dir "$RUNNER_TEMP/Vencord" --plugin "$PWD/release/uwuSpeak.tar.gz"
+          node tests/installer-e2e.mjs verify "$RUNNER_TEMP/Vencord" ~/Applications/Discord.app/Contents/Resources ~/Library/Application\ Support/Vencord/settings/settings.json
+
+      - name: Upload installer logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-logs-${{ runner.os }}
+          path: |
+            ~/.local/share/uwuspeak/logs
+            ~/Library/Application Support/UwUSpeak/logs
+            ~/AppData/Local/UwUSpeak/logs
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
-    needs: [check, vencord-build]
+    needs: [check, installer]
     permissions:
       contents: write
     steps:
@@ -111,18 +167,19 @@ jobs:
             --notes "$(cat <<'EOF'
           ## Install
 
-          **Windows (PowerShell):**
+          **Windows:** open PowerShell and run
           ```powershell
           irm https://github.com/${{ github.repository }}/releases/latest/download/install.ps1 | iex
           ```
+          or download and double-click **UwUSpeak-Installer.cmd** below.
 
           **Linux / macOS:**
           ```sh
           curl -fsSL https://github.com/${{ github.repository }}/releases/latest/download/install.sh | bash
           ```
 
-          You need git and Node.js 22+. The script clones and builds Vencord from source (custom plugins can't be added to the prebuilt Vencord installer), adds the plugin, and patches Discord. Then enable **UwUSpeak** under *Settings → Vencord → Plugins*.
+          The installer finds Discord and Vesktop, works with an existing Vencord or Equicord install, and downloads whatever it needs (Node.js, pnpm, Vencord's source). Nothing else has to be installed first. Run it again to update.
 
-          Already have a Vencord source checkout? Unzip `uwuSpeak.zip` into its `src/userplugins` folder, then run `pnpm build`.
+          Building Vencord yourself? Extract `uwuSpeak.zip` into its `src/userplugins` folder and run `pnpm build`.
           EOF
           )"

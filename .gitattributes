@@ -2,3 +2,4 @@
 *.sh text eol=lf
 vencord/uwuSpeak/engine.js linguist-generated
 vencord/uwuSpeak/engine.d.ts linguist-generated
+*.cmd text eol=crlf

@@ -1,90 +1,120 @@
 #!/usr/bin/env bash
-# Installs or updates the UwUSpeak Vencord plugin on Linux and macOS.
+# UwUSpeak installer for Linux and macOS.
 #
 #   curl -fsSL https://github.com/MagicCat3022/UwU_Speak/releases/latest/download/install.sh | bash
 #
-# Options go after "bash -s --", for example:
-#   curl -fsSL .../install.sh | bash -s -- --vencord ~/src/Vencord --version v0.1.0 --inject
+# This only makes sure Node.js is available (downloading a private copy when it isn't), then starts
+# installer.mjs, which asks a few questions and does the rest. Options go after "bash -s --", for
+# example: curl -fsSL .../install.sh | bash -s -- --yes --target discord. See --help.
 #
-# It clones Vencord from source if needed (custom plugins can't be loaded by the prebuilt
-# installer), copies the plugin into src/userplugins/uwuSpeak, builds Vencord, and patches
-# Discord the first time.
+# Environment: UWUSPEAK_RELEASE picks a release tag (default latest), UWUSPEAK_INSTALLER runs a
+# local installer.mjs, UWUSPEAK_PORTABLE_NODE=1 ignores system Node.js.
 set -euo pipefail
 
 repo="MagicCat3022/UwU_Speak"
-vencord="${VENCORD_PATH:-$HOME/Vencord}"
-version="${UWUSPEAK_VERSION:-latest}"
-inject=false
+node_line="latest-v24.x"
+release="${UWUSPEAK_RELEASE:-latest}"
 
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --vencord) vencord="$2"; shift 2 ;;
-    --version) version="$2"; shift 2 ;;
-    --inject) inject=true; shift ;;
-    -h | --help) echo "Usage: install.sh [--vencord <path>] [--version <tag>] [--inject]"; exit 0 ;;
-    *) echo "Unknown option: $1" >&2; exit 1 ;;
-  esac
-done
-
-step() { printf '\033[36m==> %s\033[0m\n' "$1"; }
-fail() { printf '\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
+fail() {
+  printf '\n\033[31mx %s\033[0m\n' "$1" >&2
+  echo "Need help? https://github.com/$repo/issues" >&2
+  exit 1
+}
 has() { command -v "$1" > /dev/null 2>&1; }
 
-step "Checking prerequisites"
-has git || fail "git is required. Install it with your package manager and run this again."
-has node || fail "Node.js 22 or newer is required. Install it from https://nodejs.org and run this again."
-has curl || fail "curl is required."
-node_major="$(node --version | sed 's/^v//; s/\..*//')"
-[ "$node_major" -ge 22 ] || fail "Node.js 22 or newer is required; found $(node --version)."
-if ! has pnpm; then
-  step "Installing pnpm (npm install -g pnpm)"
-  npm install -g pnpm
-  has pnpm || fail "pnpm was installed but is not on PATH. Open a new terminal and run this again."
-fi
+case "$(uname -s)" in
+  Linux) os=linux; state_dir="${XDG_DATA_HOME:-$HOME/.local/share}/uwuspeak" ;;
+  Darwin) os=darwin; state_dir="$HOME/Library/Application Support/UwUSpeak" ;;
+  *) fail "This installer supports Linux and macOS. On Windows, use install.ps1." ;;
+esac
+case "$(uname -m)" in
+  x86_64 | amd64) arch=x64 ;;
+  aarch64 | arm64) arch=arm64 ;;
+  *) fail "Unsupported processor: $(uname -m)." ;;
+esac
+tools_dir="$state_dir/tools"
 
-fresh=false
-if [ ! -e "$vencord" ]; then
-  step "Cloning Vencord into $vencord"
-  git clone https://github.com/Vendicated/Vencord "$vencord"
-  fresh=true
-elif [ ! -d "$vencord/src/plugins" ]; then
-  fail "$vencord exists but is not a Vencord source checkout. Pass --vencord with a different folder."
-fi
-
-if [ "$version" = latest ]; then
-  url="https://github.com/$repo/releases/latest/download/uwuSpeak.zip"
+if has curl; then
+  get() { curl -fsSL --retry 3 --retry-delay 1 "$1" -o "$2"; }
+  get_text() { curl -fsSL --retry 3 --retry-delay 1 "$1"; }
+elif has wget; then
+  get() { wget -q --tries=3 -O "$2" "$1"; }
+  get_text() { wget -q --tries=3 -O - "$1"; }
 else
-  url="https://github.com/$repo/releases/download/$version/uwuSpeak.zip"
-fi
-temp="$(mktemp -d)"
-trap 'rm -rf "$temp"' EXIT
-
-step "Downloading the plugin ($version)"
-curl -fsSL "$url" -o "$temp/uwuSpeak.zip"
-if has unzip; then unzip -q "$temp/uwuSpeak.zip" -d "$temp"; else tar -xf "$temp/uwuSpeak.zip" -C "$temp"; fi
-[ -f "$temp/uwuSpeak/index.tsx" ] || fail "The downloaded archive does not contain the plugin."
-
-target="$vencord/src/userplugins/uwuSpeak"
-step "Installing the plugin into $target"
-mkdir -p "$vencord/src/userplugins"
-rm -rf "$target"
-mv "$temp/uwuSpeak" "$target"
-
-cd "$vencord"
-step "Installing Vencord dependencies"
-pnpm install --frozen-lockfile
-step "Building Vencord"
-pnpm build
-if [ "$fresh" = true ] || [ "$inject" = true ]; then
-  step "Patching Discord to use this Vencord build (choose your Discord install when asked)"
-  # Piped through bash, stdin is this script, so the installer's prompts read the terminal.
-  if [ -r /dev/tty ]; then pnpm inject < /dev/tty; else pnpm inject; fi
+  fail "curl or wget is needed to download files."
 fi
 
-printf '\n\033[32mUwUSpeak is installed.\033[0m\n'
-if [ "$fresh" = true ] || [ "$inject" = true ]; then
-  echo "Start Discord, then enable UwUSpeak under Settings > Vencord > Plugins."
+if has sha256sum; then
+  sha256() { sha256sum "$1" | cut -d' ' -f1; }
 else
-  echo "Fully restart Discord, then enable UwUSpeak under Settings > Vencord > Plugins if it is not on yet."
-  echo "If Discord does not show Vencord, run this again with --inject."
+  sha256() { shasum -a 256 "$1" | cut -d' ' -f1; }
 fi
+
+# True when the given node binary is at least 22.13.
+node_ok() {
+  "$1" -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=13)?0:1)' 2> /dev/null
+}
+
+node=""
+if [ -z "${UWUSPEAK_PORTABLE_NODE:-}" ] && has node && node_ok node; then
+  node="$(command -v node)"
+fi
+if [ -z "$node" ]; then
+  for dir in $(ls -d "$tools_dir"/node-v*-"$os-$arch" 2> /dev/null | sort -rV 2> /dev/null || true); do
+    if [ -x "$dir/bin/node" ] && node_ok "$dir/bin/node"; then node="$dir/bin/node"; break; fi
+  done
+fi
+if [ -z "$node" ]; then
+  if [ "$os" = linux ] && ldd --version 2>&1 | grep -qi musl; then
+    fail "Install Node.js 22.13 or newer with your package manager (for example: apk add nodejs), then run this again."
+  fi
+  printf '\033[36mDownloading Node.js for the installer (about 30 MB, only once)...\033[0m\n'
+  mkdir -p "$tools_dir"
+  line="$(get_text "https://nodejs.org/dist/$node_line/SHASUMS256.txt" | grep -E "  node-v[0-9.]+-$os-$arch\.tar\.gz$" | head -1)" ||
+    fail "Couldn't reach nodejs.org. Check your internet connection."
+  [ -n "$line" ] || fail "Couldn't find a Node.js download for $os $arch."
+  expected="${line%% *}"
+  name="${line##* }"
+  name="${name%.tar.gz}"
+  version="${name#node-v}"
+  version="${version%%-*}"
+  archive="$tools_dir/$name.tar.gz"
+  get "https://nodejs.org/dist/v$version/$name.tar.gz" "$archive" || fail "Couldn't download Node.js."
+  if [ "$(sha256 "$archive")" != "$expected" ]; then
+    rm -f "$archive"
+    fail "The Node.js download is damaged (checksum mismatch). Run the installer again."
+  fi
+  rm -rf "${tools_dir:?}/$name"
+  tar -xzf "$archive" -C "$tools_dir"
+  rm -f "$archive"
+  node="$tools_dir/$name/bin/node"
+  [ -x "$node" ] || fail "Node.js was downloaded but can't be run on this system."
+fi
+
+if [ -n "${UWUSPEAK_INSTALLER:-}" ]; then
+  installer="$UWUSPEAK_INSTALLER"
+else
+  if [ "$release" = latest ]; then
+    base="https://github.com/$repo/releases/latest/download"
+  else
+    base="https://github.com/$repo/releases/download/$release"
+  fi
+  mkdir -p "$state_dir"
+  installer="$state_dir/installer.mjs"
+  get "$base/installer.mjs" "$installer" || fail "Couldn't download the installer. Check your internet connection."
+  expected="$(get_text "$base/SHA256SUMS.txt" | awk '$2 == "installer.mjs" || $2 == "*installer.mjs" { print $1 }')" ||
+    fail "Couldn't download the installer checksums."
+  if [ -z "$expected" ] || [ "$(sha256 "$installer")" != "$expected" ]; then
+    rm -f "$installer"
+    fail "The installer download is damaged (checksum mismatch). Run the command again."
+  fi
+fi
+
+args=("$installer")
+[ "$release" = latest ] || args+=(--release "$release")
+export NODE_USE_ENV_PROXY=1
+# Piped through bash, stdin is this script; give the installer the terminal so it can ask questions.
+if [ ! -t 0 ] && { true < /dev/tty; } 2> /dev/null; then
+  exec "$node" "${args[@]}" "$@" < /dev/tty
+fi
+exec "$node" "${args[@]}" "$@"

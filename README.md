@@ -99,9 +99,7 @@ Mentions, `@everyone`/`@here`, custom emoji, `:shortcodes:`, timestamps, links, 
 
 ### Install the plugin
 
-Custom plugins need a Vencord build from source; the prebuilt installer can't load them. The install script handles that: it clones Vencord into `~/Vencord` (or reuses an existing checkout), adds the latest released plugin, builds Vencord, and patches Discord the first time. You need [git](https://git-scm.com/downloads) and [Node.js](https://nodejs.org) 22 or newer; it installs pnpm if it's missing.
-
-Windows (PowerShell):
+Windows: open PowerShell and run the command below, or download and double-click [UwUSpeak-Installer.cmd](https://github.com/MagicCat3022/UwU_Speak/releases/latest/download/UwUSpeak-Installer.cmd).
 
 ```powershell
 irm https://github.com/MagicCat3022/UwU_Speak/releases/latest/download/install.ps1 | iex
@@ -113,9 +111,18 @@ Linux or macOS:
 curl -fsSL https://github.com/MagicCat3022/UwU_Speak/releases/latest/download/install.sh | bash
 ```
 
-When asked, pick your Discord install, then start Discord and enable **UwUSpeak** in *Settings → Vencord → Plugins*. Run the same command again to update. To use another Vencord folder or a specific release, download the script and pass `-VencordPath <folder> -Version v0.1.0` (PowerShell) or `--vencord <folder> --version v0.1.0` (shell); `-Inject`/`--inject` patches Discord again after a Discord update removes Vencord.
+The installer shows what it found, asks a few questions with sensible defaults (arrow keys and Enter), and then does the rest. Run the same command again to update UwUSpeak and Vencord, to repair Discord after an update, or to uninstall. Nothing needs to be installed first:
 
-Already build Vencord from source? Download `uwuSpeak.zip` from the [latest release](https://github.com/MagicCat3022/UwU_Speak/releases/latest), extract it into Vencord's `src/userplugins` folder, run `pnpm build`, and restart Discord.
+- **Tools.** It uses your Node.js 22.13+ if you have it, otherwise it downloads a private, checksum-verified copy. It downloads the exact pnpm version Vencord pins. Git is optional: without it, Vencord is downloaded as a snapshot that the installer updates (Vencord's built-in updater needs git).
+- **Regular Vencord.** Custom plugins need Vencord built from source, so a Discord that uses the regular Vencord download is switched to a source build in `~/Vencord`. Settings, themes and enabled plugins are kept.
+- **Vencord or Equicord built from source.** It finds the folder Discord already loads, adds the plugin there, and offers to update it first (only fast-forwarding a clean checkout). Your other user plugins are untouched.
+- **No mod yet.** It downloads Vencord, builds it, and patches Discord with Vencord's own installer.
+- **Vesktop.** It points Vesktop's custom Vencord location at the build.
+- Discord Stable, PTB, Canary and Development are supported, including Flatpak on Linux (the Snap package isn't supported by Vencord). Apps are only closed after asking, and UwUSpeak is switched on for you when the app is closed.
+
+To skip the questions or script it, pass options after `bash -s --` (shell) or set `UWUSPEAK_ARGS` (PowerShell), for example `--yes --target discord`. `--help` lists them all, including `--dir`, `--release`, `--uninstall` and `--dry-run`. Logs are kept in `%LOCALAPPDATA%UwUSpeaklogs` (Windows), `~/Library/Application Support/UwUSpeak/logs` (macOS) or `~/.local/share/uwuspeak/logs` (Linux).
+
+Already build Vencord from source yourself? Extract `uwuSpeak.zip` from the [latest release](https://github.com/MagicCat3022/UwU_Speak/releases/latest) into its `src/userplugins` folder, run `pnpm build`, and restart Discord.
 
 ### Develop the plugin
 
@@ -165,7 +172,7 @@ Face meanings vary with context and community. Passing structural tests does not
 2. Run `npm run vencord:build` and commit the regenerated `vencord/uwuSpeak/engine.*` files.
 3. Push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`.
 
-The [Plugin workflow](.github/workflows/plugin.yml) runs the tests, builds the plugin into the latest Vencord, and publishes a GitHub release with `uwuSpeak.zip` and the install scripts. The install commands above always fetch the latest release.
+The [Plugin workflow](.github/workflows/plugin.yml) runs the tests, runs the installer end to end on Windows, macOS and Linux (building into the latest Vencord and Equicord and patching a fake Discord), and publishes a GitHub release with the plugin, the installers and their checksums. The install commands above always fetch the latest release.
 
 ## License
 
