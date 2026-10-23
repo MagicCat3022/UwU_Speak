@@ -1,0 +1,109 @@
+export type Style = 'uwu' | 'nya';
+export type Intensity = 'light' | 'medium' | 'heavy';
+export type IntentState = 'matched' | 'neutral' | 'uncertain';
+export interface Rates {
+  stutter: number;
+  stretch: number;
+  tilde: number;
+  nya: number;
+  emoticon: number;
+}
+export interface Features {
+  vocabulary: boolean;
+  letterSwap: boolean;
+  nyaSpelling: boolean;
+}
+export interface Endings {
+  maxPerMessage: number;
+  minSentenceGap: number;
+  allowCombination: boolean;
+}
+export interface EmoticonOptions {
+  enabled: boolean;
+  intent: string;
+  maxIntensity: number;
+  asciiOnly: boolean;
+  detectedIntents: string[];
+}
+export interface ConversionOptions {
+  style?: Style;
+  intensity?: Intensity;
+  seed?: string;
+  preserveTerms?: string[];
+  quotedText?: 'preserve' | 'convert';
+  nyaScope?: 'words' | 'full';
+  features?: Partial<Features>;
+  rates?: Partial<Rates>;
+  endings?: Partial<Endings>;
+  emoticons?: Partial<EmoticonOptions>;
+  diagnostics?: boolean;
+}
+export interface ResolvedOptions {
+  style: Style;
+  intensity: Intensity;
+  seed: string;
+  preserveTerms: string[];
+  quotedText: 'preserve' | 'convert';
+  nyaScope: 'words' | 'full';
+  features: Features;
+  rates: Rates;
+  endings: Endings;
+  emoticons: EmoticonOptions;
+  diagnostics: boolean;
+}
+export interface SourceRange {
+  inputStart: number;
+  inputEnd: number;
+}
+export interface Change extends SourceRange {
+  outputStart: number;
+  outputEnd: number;
+  before: string;
+  after: string;
+  ruleIds: string[];
+}
+export interface ProtectedSpan extends SourceRange {
+  reasonCodes: string[];
+}
+export interface Decision extends SourceRange {
+  intentState: IntentState;
+  ruleId: string;
+  intent?: string;
+  entryId?: string;
+  outcome: 'selected' | 'skipped';
+  reasonCode: string;
+}
+export interface Diagnostics {
+  changes: Change[];
+  protectedSpans: ProtectedSpan[];
+  decisions: Decision[];
+  truncated: boolean;
+}
+export interface ConversionResult {
+  text: string;
+  meta: {
+    engineVersion: string;
+    rulesVersion: string;
+    segmentationVersion: string;
+    emoticonDictionaryVersion: string;
+    seed: string;
+  };
+  diagnostics?: Diagnostics;
+}
+export interface Face {
+  id: string;
+  text: string;
+  aliases: string[];
+  kind: string;
+  meanings: string[];
+  intents: string[];
+  intensity: number;
+  styles: string[];
+  selection: string;
+  eligibility: string;
+  placement: string[];
+  use_when: string;
+  avoid_when: string;
+  example: { input: string; output: string };
+  source_ids: string[];
+}

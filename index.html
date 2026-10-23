@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f8f5ef" />
+    <meta
+      name="description"
+      content="Say something silly. Turn your words into UwU or nya speech, right in your browser."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>UwU Speak — Say something silly</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#converter" aria-label="UwU Speak home"
+        ><span class="brand-mark" aria-hidden="true">w</span> uwu<span class="brand-light"
+          >speak</span
+        ><span class="version">01</span></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="#converter" data-page="converter" aria-current="page">Converter</a
+        ><a href="#dictionary" data-page="dictionary"
+          >Face dictionary <span id="dictionary-total">36</span></a
+        ><a href="#wiki" data-page="wiki">Emoticon wiki</a>
+      </nav>
+      <span class="local-badge"><i></i> Made in your browser</span>
+    </header>
+    <main>
+      <section id="converter-page">
+        <div class="hero">
+          <div>
+            <p class="eyebrow">A SMALL LANGUAGE OF JOY</p>
+            <h1>Say something <em>silly.</em></h1>
+          </div>
+          <div class="hero-face" aria-hidden="true">
+            <span class="spark spark-one">✧</span><span class="face-drawing">( ˘ ω ˘ )</span
+            ><span class="face-caption">a sillier state of mind</span
+            ><span class="spark spark-two">✦</span>
+          </div>
+        </div>
+        <section class="workbench" aria-label="Text converter">
+          <div class="style-bar">
+            <fieldset class="inline-field">
+              <legend>THE DIALECT</legend>
+              <div class="segmented style-choice">
+                <label
+                  ><input type="radio" name="style" value="uwu" checked /><span>Silly</span></label
+                ><label><input type="radio" name="style" value="nya" /><span>Feline</span></label>
+              </div>
+            </fieldset>
+            <fieldset class="inline-field intensity-field">
+              <legend>Intensity</legend>
+              <div class="segmented">
+                <label
+                  ><input type="radio" name="intensity" value="light" /><span>Light</span></label
+                ><label
+                  ><input type="radio" name="intensity" value="medium" checked /><span
+                    >Medium</span
+                  ></label
+                ><label
+                  ><input type="radio" name="intensity" value="heavy" /><span>Heavy</span></label
+                >
+              </div>
+            </fieldset>
+          </div>
+          <div class="text-panels">
+            <section class="text-panel input-panel">
+              <div class="panel-title">
+                <label for="input-text">Your words</label><span id="input-count">0 characters</span>
+              </div>
+              <textarea
+                id="input-text"
+                spellcheck="false"
+                placeholder="Hello, lovely human…"
+                aria-describedby="input-help"
+              >
+Hello, world! Thanks for being here.
+I really love our small corner of the internet.</textarea>
+              <div class="panel-footer">
+                <button type="button" class="text-button" id="example-button">
+                  ↗ Try an example</button
+                ><button type="button" class="text-button muted" id="clear-button">Clear</button>
+              </div>
+            </section>
+            <section class="text-panel output-panel">
+              <div class="panel-title">
+                <label for="output-text">A little uwu</label
+                ><span class="output-tag" id="output-tag">MEDIUM · UWU</span>
+              </div>
+              <textarea
+                id="output-text"
+                readonly
+                spellcheck="false"
+                placeholder="Your softer words will appear here…"
+                aria-label="Converted text"
+              ></textarea>
+              <pre
+                id="highlight-output"
+                hidden
+                aria-label="Converted text with changes highlighted"
+                tabindex="0"
+              ></pre>
+              <div class="panel-footer">
+                <button type="button" class="text-button" id="shuffle-button">
+                  <span aria-hidden="true">⤨</span> Shuffle</button
+                ><button type="button" class="primary-button" id="copy-button">
+                  Copy text <span aria-hidden="true">↗</span>
+                </button>
+              </div>
+            </section>
+          </div>
+          <div class="workbench-foot">
+            <p id="input-help">
+              <span aria-hidden="true">◌</span> Converted locally. Your text stays in this tab.
+            </p>
+            <label class="check compact"
+              ><input type="checkbox" id="highlight" /> Show changes</label
+            >
+          </div>
+        </section>
+        <p id="status" class="status" role="status" aria-live="polite">Getting your words ready…</p>
+        <p id="error" class="error" role="alert" hidden></p>
+        <details class="advanced" id="advanced">
+          <summary>
+            <span><span class="adjust-icon" aria-hidden="true">☷</span> Make it your own</span
+            ><span class="summary-plus" aria-hidden="true">+</span>
+          </summary>
+          <div class="advanced-content">
+            <div class="settings-heading">
+              <p>Dial in the details. Changing dialect or intensity restores its preset.</p>
+              <button type="button" id="reset-button" class="text-button">Reset to preset</button>
+            </div>
+            <div class="settings-grid">
+              <fieldset>
+                <legend>Spelling</legend>
+                <label class="check"
+                  ><input type="checkbox" id="vocabulary" /> Silly vocabulary
+                  <small>thanks → thankies</small></label
+                ><label class="check"
+                  ><input type="checkbox" id="letter-swap" /> Swap r / l for w</label
+                ><label class="check"
+                  ><input type="checkbox" id="nya-spelling" /> Nya spelling
+                  <small>no → nyo</small></label
+                ><label class="field" for="nya-scope"
+                  >Nya spelling scope<select id="nya-scope">
+                    <option value="words">Familiar words</option>
+                    <option value="full">All n + vowel sounds</option>
+                  </select></label
+                >
+              </fieldset>
+              <fieldset>
+                <legend>Expression rates</legend>
+                <p class="field-hint">
+                  Chance per eligible word or sentence. Context and spacing still apply.
+                </p>
+                <div id="rate-controls"></div>
+              </fieldset>
+              <fieldset>
+                <legend>Faces & tone</legend>
+                <label class="check"
+                  ><input type="checkbox" id="faces-enabled" /> Add fitting faces</label
+                ><label class="check"
+                  ><input type="checkbox" id="ascii-only" /> ASCII faces only</label
+                ><label class="field" for="face-intent"
+                  >Intended tone<select id="face-intent">
+                    <option value="auto">Let the words guide it</option>
+                  </select></label
+                ><label class="field" for="face-intensity"
+                  >Maximum face intensity<select id="face-intensity">
+                    <option value="1">1 · Subtle</option>
+                    <option value="2">2 · Expressive</option>
+                    <option value="3">3 · Very expressive</option>
+                  </select></label
+                >
+              </fieldset>
+              <fieldset>
+                <legend>Room to breathe</legend>
+                <label class="check"
+                  ><input type="checkbox" id="allow-combination" /> Face + soft ending
+                  together</label
+                ><label class="field" for="max-endings"
+                  >Decorated sentences per message<input
+                    id="max-endings"
+                    type="number"
+                    min="0"
+                    step="1" /></label
+                ><label class="field" for="sentence-gap"
+                  >Plain sentences between endings<input
+                    id="sentence-gap"
+                    type="number"
+                    min="0"
+                    step="1"
+                /></label>
+                <p class="field-hint">
+                  Messages up to 240 characters get at most one newly decorated sentence.
+                </p>
+              </fieldset>
+              <fieldset>
+                <legend>Keep it yours</legend>
+                <label class="field" for="quoted-text"
+                  >Quoted text<select id="quoted-text">
+                    <option value="preserve">Keep original spelling</option>
+                    <option value="convert">Convert spelling inside quotes</option>
+                  </select></label
+                ><label class="field" for="preserve-terms"
+                  >Words to leave alone<textarea
+                    id="preserve-terms"
+                    rows="3"
+                    placeholder="Luna&#10;Your project name"
+                  ></textarea>
+                </label>
+                <p class="field-hint">
+                  One word or phrase per line. Matches are case-sensitive. Links, code, and existing
+                  faces are preserved automatically.
+                </p>
+              </fieldset>
+              <fieldset>
+                <legend>A repeatable kind of silly</legend>
+                <label class="field" for="seed"
+                  >Variation seed<input
+                    id="seed"
+                    type="text"
+                    maxlength="1024"
+                    autocomplete="off"
+                    spellcheck="false"
+                /></label>
+                <p class="field-hint">
+                  The same text, settings, seed, and converter version give the same result. Shuffle
+                  changes only this seed.
+                </p>
+                <p class="field-hint">
+                  English plain text is the starting point. Tone matching is a cautious guess;
+                  familiar phrases work best.
+                </p>
+              </fieldset>
+            </div>
+          </div>
+        </details>
+        <details class="inspection" id="inspection">
+          <summary>Under the hood <span>Conversion details</span></summary>
+          <pre id="diagnostics-output"></pre>
+        </details>
+      </section>
+      <section id="dictionary-page" hidden>
+        <div class="hero dictionary-hero">
+          <div>
+            <p class="eyebrow">A POCKET DICTIONARY OF FEELINGS</p>
+            <h1>Small faces. <em>Big feelings.</em></h1>
+            <p class="intro">
+              What they mean, when they fit, and when to hold back.<br />A curated starting point —
+              meanings always depend on context.
+            </p>
+          </div>
+        </div>
+        <div class="dictionary-controls">
+          <label class="search-field" for="face-search"
+            ><span aria-hidden="true">⌕</span
+            ><input
+              id="face-search"
+              type="search"
+              placeholder="Search faces, meanings, or uses…" /></label
+          ><label class="visually-hidden" for="dictionary-intent">Filter dictionary by intent</label
+          ><select id="dictionary-intent">
+            <option value="all">Every feeling</option></select
+          ><span id="dictionary-count" role="status"></span>
+        </div>
+        <div class="face-grid" id="face-grid"></div>
+        <p id="dictionary-empty" hidden>
+          No faces match yet. Try a broader word or another feeling.
+        </p>
+        <p class="dictionary-note">
+          Usage notes are editorial guidance, not universal definitions. Some faces are included for
+          reference and are not yet selected by the converter.
+        </p>
+      </section>
+      <section id="wiki-page" hidden>
+        <div class="hero dictionary-hero">
+          <div>
+            <p class="eyebrow">EVERY FACE WE LOOKED AT</p>
+            <h1>The emoticon <em>wiki.</em></h1>
+            <p class="intro">
+              <span id="wiki-total">Thousands of</span> faces collected from emojidb.org and
+              Kaomoji.ru on <span id="wiki-collected">—</span>, and how each one was judged.<br />Pick
+              a face to see why it was accepted or rejected.
+            </p>
+          </div>
+        </div>
+        <div class="wiki-stats" id="wiki-stats"></div>
+        <div class="dictionary-controls wiki-controls">
+          <label class="search-field" for="wiki-search"
+            ><span aria-hidden="true">⌕</span
+            ><input id="wiki-search" type="search" placeholder="Search faces, meanings, reasons…"
+          /></label>
+          <label class="visually-hidden" for="wiki-verdict">Verdict</label
+          ><select id="wiki-verdict">
+            <option value="all">Any verdict</option>
+            <option value="accepted">Accepted</option>
+            <option value="alias">Variant</option>
+            <option value="existing">Already in dictionary</option>
+            <option value="rejected">Rejected</option>
+            <option value="unclassified">Not yet classified</option></select
+          ><label class="visually-hidden" for="wiki-reason">Rejection reason</label
+          ><select id="wiki-reason">
+            <option value="all">Any reason</option></select
+          ><label class="visually-hidden" for="wiki-intent">Mood</label
+          ><select id="wiki-intent">
+            <option value="all">Any mood</option></select
+          ><label class="visually-hidden" for="wiki-eligibility">When inserted</label
+          ><select id="wiki-eligibility">
+            <option value="all">Any insertion rule</option></select
+          ><label class="visually-hidden" for="wiki-source">Found on</label
+          ><select id="wiki-source">
+            <option value="all">Any source</option></select
+          ><span id="wiki-count" role="status"></span>
+        </div>
+        <div class="wiki-grid" id="wiki-grid"></div>
+        <p id="wiki-empty" hidden>No faces match. Try clearing a filter.</p>
+        <button type="button" class="text-button wiki-more" id="wiki-more" hidden>Show more</button>
+        <p class="dictionary-note">
+          Verdicts follow the intake criteria in docs/emoticon-criteria.md. Claude Haiku subagents
+          classified each face; the intake script rejected emoji-only entries and recognized faces
+          already in the dictionary. Sources are user-submitted collections, so meanings are
+          editorial.
+        </p>
+        <dialog id="wiki-dialog" class="wiki-dialog" aria-label="Face details"></dialog>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <span>Made for a little everyday silliness.</span
+      ><span
+        >uwu speak <span aria-hidden="true">✧</span> <span id="version-label">v0.1.0</span></span
+      >
+    </footer>
+    <noscript
+      >This converter needs JavaScript. Your text is processed locally in your browser.</noscript
+    >
+    <script type="module" src="/src/browser/main.ts"></script>
+  </body>
+</html>

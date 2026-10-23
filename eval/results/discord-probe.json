@@ -1,0 +1,145 @@
+{
+  "startedAt": "2026-10-09T19:22:04.269Z",
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) discord/1.0.9261 Chrome/148.0.7778.280 Electron/42.11.10 Safari/537.36",
+  "crossOriginIsolated": false,
+  "hardwareConcurrency": 16,
+  "steps": [
+    {
+      "step": "import library from jsDelivr",
+      "ok": true,
+      "ms": 80,
+      "detail": "963 exports"
+    },
+    {
+      "step": "load model from disk",
+      "ok": true,
+      "ms": 597
+    },
+    {
+      "step": "first inference (warm-up)",
+      "ok": true,
+      "ms": 139
+    },
+    {
+      "step": "classify samples",
+      "ok": true,
+      "ms": 0,
+      "detail": [
+        {
+          "text": "omg we won the finals!!",
+          "ms": 6.4,
+          "top": [
+            [
+              "surprise",
+              0.926
+            ],
+            [
+              "excitement",
+              0.359
+            ],
+            [
+              "joy",
+              0.119
+            ]
+          ]
+        },
+        {
+          "text": "thank you so much, you're a lifesaver",
+          "ms": 6.5,
+          "top": [
+            [
+              "gratitude",
+              0.996
+            ],
+            [
+              "admiration",
+              0.026
+            ],
+            [
+              "approval",
+              0.012
+            ]
+          ]
+        },
+        {
+          "text": "lmao that's hilarious",
+          "ms": 4.9,
+          "top": [
+            [
+              "amusement",
+              0.988
+            ],
+            [
+              "joy",
+              0.083
+            ],
+            [
+              "neutral",
+              0.012
+            ]
+          ]
+        },
+        {
+          "text": "my grandma passed away last night",
+          "ms": 4.9,
+          "top": [
+            [
+              "sadness",
+              0.963
+            ],
+            [
+              "neutral",
+              0.046
+            ],
+            [
+              "grief",
+              0.034
+            ]
+          ]
+        },
+        {
+          "text": "great, another monday",
+          "ms": 4.7,
+          "top": [
+            [
+              "admiration",
+              0.983
+            ],
+            [
+              "gratitude",
+              0.026
+            ],
+            [
+              "joy",
+              0.014
+            ]
+          ]
+        },
+        {
+          "text": "meeting moved to 3pm",
+          "ms": 4.1,
+          "top": [
+            [
+              "neutral",
+              0.934
+            ],
+            [
+              "realization",
+              0.077
+            ],
+            [
+              "approval",
+              0.02
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "step": "JS heap growth",
+      "ok": true,
+      "ms": 0,
+      "detail": "110.4 MB (WASM memory not included)"
+    }
+  ]
+}

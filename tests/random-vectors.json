@@ -1,0 +1,6 @@
+[
+  { "seed": "0", "rule": "emoticon_rate", "position": 0, "hash": 1952997390 },
+  { "seed": "review", "rule": "emoticon_choice", "position": 0, "hash": 2523195223 },
+  { "seed": "にゃ🐱", "rule": "stutter", "position": 12, "hash": 446133162 },
+  { "seed": "a\\b\n\"", "rule": "tilde", "position": 240, "hash": 1650497278 }
+]

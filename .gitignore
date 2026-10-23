@@ -1,0 +1,9 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+.cocoindex_code/
+.ccc/
+*.log
+.models/
+.cache/

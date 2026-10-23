@@ -1,0 +1,52 @@
+{
+  "name": "uwu-speak",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A local-first UwU and nya text converter with a shared browser and API engine.",
+  "license": "MIT",
+  "author": "MagicCat3022",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MagicCat3022/UwU_Speak.git"
+  },
+  "homepage": "https://github.com/MagicCat3022/UwU_Speak#readme",
+  "exports": {
+    ".": {
+      "types": "./dist/types/src/core/index.d.ts",
+      "import": "./dist/library/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "dev:api": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && vite build && node scripts/build.mjs && tsc -p tsconfig.library.json",
+    "start": "node dist/server.mjs",
+    "test": "tsx --test tests/core.test.ts tests/api.test.ts",
+    "test:browser": "playwright test",
+    "check": "npm run typecheck && npm test",
+    "test:all": "npm run check && npm run test:browser",
+    "format": "prettier --write src tests scripts index.html package.json vite.config.ts playwright.config.ts tsconfig*.json .prettierrc.json",
+    "benchmark": "tsx scripts/benchmark.ts",
+    "vencord:build": "node scripts/build-vencord.mjs",
+    "vencord:install": "node scripts/build-vencord.mjs --install ../Vencord",
+    "eval:intent": "tsx scripts/compare-intent.ts"
+  },
+  "dependencies": {
+    "unicode-segmenter": "0.17.3"
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "26.6.2",
+    "esbuild": "0.28.2",
+    "prettier": "3.9.8",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  }
+}

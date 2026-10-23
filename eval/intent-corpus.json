@@ -1,0 +1,291 @@
+{
+  "description": "Discord-style messages for comparing mood detectors. `moods` lists the dictionary intents a face could fairly express; an empty list means no face should be added (neutral, sensitive, sarcastic, or someone else's feelings). Labels are editorial judgments by one author; add real messages and disagreements over time.",
+  "version": "0.1.0",
+  "cases": [
+    { "text": "hey everyone!", "moods": ["greeting"], "kind": "speech_act" },
+    { "text": "hiii how's it going", "moods": ["greeting"], "kind": "speech_act" },
+    { "text": "good morning chat", "moods": ["greeting"], "kind": "speech_act" },
+    { "text": "yo whats up", "moods": ["greeting"], "kind": "speech_act" },
+    { "text": "heyy long time no see", "moods": ["greeting", "joy"], "kind": "speech_act" },
+    { "text": "ok gotta go, bye!", "moods": ["farewell"], "kind": "speech_act" },
+    { "text": "see you tomorrow", "moods": ["farewell"], "kind": "speech_act" },
+    { "text": "cya later guys", "moods": ["farewell"], "kind": "speech_act" },
+    { "text": "logging off for today, take care", "moods": ["farewell"], "kind": "speech_act" },
+    { "text": "gn everyone", "moods": ["sleep", "farewell"], "kind": "speech_act" },
+    { "text": "going to bed now, night", "moods": ["sleep", "farewell"], "kind": "speech_act" },
+    {
+      "text": "im so sleepy i can barely keep my eyes open",
+      "moods": ["sleep"],
+      "kind": "emotion"
+    },
+    {
+      "text": "it's 3am why am i still awake",
+      "moods": ["sleep", "resignation"],
+      "kind": "emotion"
+    },
+    { "text": "thanks for the help!", "moods": ["gratitude"], "kind": "speech_act" },
+    {
+      "text": "thank you so much, you're a lifesaver",
+      "moods": ["gratitude"],
+      "kind": "speech_act"
+    },
+    { "text": "ty for carrying me last game", "moods": ["gratitude"], "kind": "speech_act" },
+    { "text": "appreciate it a lot", "moods": ["gratitude"], "kind": "speech_act" },
+    {
+      "text": "tysm for the birthday wishes everyone",
+      "moods": ["gratitude", "joy"],
+      "kind": "speech_act"
+    },
+    { "text": "sorry for the late reply", "moods": ["apology"], "kind": "speech_act" },
+    { "text": "oops wrong channel", "moods": ["apology", "embarrassment"], "kind": "speech_act" },
+    {
+      "text": "my bad, i misread that",
+      "moods": ["apology", "embarrassment"],
+      "kind": "speech_act"
+    },
+    { "text": "sorry i was being so annoying earlier", "moods": ["apology"], "kind": "speech_act" },
+    { "text": "apologies for the ping", "moods": ["apology"], "kind": "speech_act" },
+    {
+      "text": "can someone help me with this bug please",
+      "moods": ["request"],
+      "kind": "speech_act"
+    },
+    { "text": "could you send me the link?", "moods": ["request"], "kind": "speech_act" },
+    { "text": "pls join vc when you can", "moods": ["request"], "kind": "speech_act" },
+    { "text": "we won the tournament!!!", "moods": ["celebration", "joy"], "kind": "emotion" },
+    { "text": "I PASSED MY DRIVING TEST", "moods": ["celebration", "joy"], "kind": "emotion" },
+    {
+      "text": "finally beat the final boss after 6 hours",
+      "moods": ["celebration", "joy"],
+      "kind": "emotion"
+    },
+    { "text": "got the job offer!!", "moods": ["celebration", "joy"], "kind": "emotion" },
+    { "text": "congrats on the promotion!", "moods": ["celebration"], "kind": "emotion" },
+    {
+      "text": "happy birthday!! hope it's a great one",
+      "moods": ["celebration", "affection"],
+      "kind": "emotion"
+    },
+    { "text": "yay pizza for dinner", "moods": ["joy", "celebration"], "kind": "emotion" },
+    { "text": "today was honestly such a good day", "moods": ["joy"], "kind": "emotion" },
+    { "text": "this song makes me so happy", "moods": ["joy"], "kind": "emotion" },
+    { "text": "the sunset tonight is gorgeous", "moods": ["joy"], "kind": "emotion" },
+    { "text": "i love this server so much", "moods": ["affection", "joy"], "kind": "emotion" },
+    { "text": "your art is amazing, seriously", "moods": ["joy", "affection"], "kind": "emotion" },
+    { "text": "so glad you're here", "moods": ["affection", "joy"], "kind": "emotion" },
+    { "text": "love you guys", "moods": ["affection"], "kind": "emotion" },
+    { "text": "you mean a lot to me", "moods": ["affection"], "kind": "emotion" },
+    { "text": "missed you!!", "moods": ["affection", "greeting"], "kind": "emotion" },
+    {
+      "text": "my cat is sleeping on my keyboard again",
+      "moods": ["cuteness", "cat_playfulness", "amusement"],
+      "kind": "emotion"
+    },
+    { "text": "look at this tiny puppy omg", "moods": ["cuteness", "joy"], "kind": "emotion" },
+    { "text": "lmao that's hilarious", "moods": ["amusement"], "kind": "emotion" },
+    { "text": "i'm crying 😂 this meme", "moods": ["amusement"], "kind": "emotion" },
+    { "text": "lol he really said that", "moods": ["amusement"], "kind": "emotion" },
+    { "text": "that pun was so bad it's good", "moods": ["amusement"], "kind": "emotion" },
+    { "text": "haha classic", "moods": ["amusement"], "kind": "emotion" },
+    { "text": "i'm here for you, i promise", "moods": ["comfort", "affection"], "kind": "emotion" },
+    { "text": "you're not alone in this", "moods": ["comfort"], "kind": "emotion" },
+    { "text": "sending you a hug", "moods": ["comfort", "affection"], "kind": "emotion" },
+    { "text": "hope you feel better soon", "moods": ["comfort"], "kind": "emotion" },
+    {
+      "text": "you've got this, don't give up",
+      "moods": ["comfort", "determination"],
+      "kind": "emotion"
+    },
+    { "text": "i'm feeling kind of down today", "moods": ["sadness"], "kind": "emotion" },
+    {
+      "text": "lost my favorite hoodie, sad",
+      "moods": ["sadness", "disappointment"],
+      "kind": "emotion"
+    },
+    {
+      "text": "my ice cream fell on the floor",
+      "moods": ["sadness", "disappointment"],
+      "kind": "emotion"
+    },
+    { "text": "i really miss summer", "moods": ["sadness"], "kind": "emotion" },
+    { "text": "the game got delayed again", "moods": ["disappointment"], "kind": "emotion" },
+    {
+      "text": "aw the event got cancelled",
+      "moods": ["disappointment", "sadness"],
+      "kind": "emotion"
+    },
+    {
+      "text": "lost by one point, so close",
+      "moods": ["disappointment", "frustration"],
+      "kind": "emotion"
+    },
+    { "text": "rip my sleep schedule", "moods": ["resignation", "sleep"], "kind": "emotion" },
+    { "text": "oh well, it is what it is", "moods": ["resignation"], "kind": "emotion" },
+    { "text": "guess i'll just redo the whole thing", "moods": ["resignation"], "kind": "emotion" },
+    {
+      "text": "why does my code never work on the first try",
+      "moods": ["frustration"],
+      "kind": "emotion"
+    },
+    { "text": "ugh my wifi keeps dropping", "moods": ["frustration"], "kind": "emotion" },
+    { "text": "this lag is so annoying", "moods": ["frustration"], "kind": "emotion" },
+    { "text": "i've restarted this three times now", "moods": ["frustration"], "kind": "emotion" },
+    {
+      "text": "stop stealing my kills >:(",
+      "moods": ["anger", "frustration", "teasing"],
+      "kind": "emotion"
+    },
+    {
+      "text": "i'm so mad they nerfed my main",
+      "moods": ["anger", "frustration"],
+      "kind": "emotion"
+    },
+    { "text": "wait what", "moods": ["confusion", "surprise"], "kind": "emotion" },
+    { "text": "i don't get how this works", "moods": ["confusion"], "kind": "emotion" },
+    { "text": "huh? what did i miss", "moods": ["confusion"], "kind": "emotion" },
+    {
+      "text": "which one am i supposed to click",
+      "moods": ["confusion", "request"],
+      "kind": "emotion"
+    },
+    { "text": "no way, really??", "moods": ["surprise"], "kind": "emotion" },
+    { "text": "omg i didn't expect that", "moods": ["surprise"], "kind": "emotion" },
+    { "text": "wow that plot twist", "moods": ["surprise"], "kind": "emotion" },
+    {
+      "text": "holy crap it actually worked",
+      "moods": ["surprise", "celebration", "joy"],
+      "kind": "emotion"
+    },
+    {
+      "text": "i tripped in front of my whole class",
+      "moods": ["embarrassment"],
+      "kind": "emotion"
+    },
+    { "text": "accidentally sent that to my boss", "moods": ["embarrassment"], "kind": "emotion" },
+    {
+      "text": "forgot to unmute for the entire meeting",
+      "moods": ["embarrassment"],
+      "kind": "emotion"
+    },
+    {
+      "text": "y-you think my drawing is good?",
+      "moods": ["shyness", "embarrassment"],
+      "kind": "emotion"
+    },
+    { "text": "i'm kinda nervous to post this", "moods": ["shyness"], "kind": "emotion" },
+    {
+      "text": "stop it you're making me blush",
+      "moods": ["shyness", "embarrassment"],
+      "kind": "emotion"
+    },
+    {
+      "text": "ok i'm going to finish this project tonight",
+      "moods": ["determination"],
+      "kind": "emotion"
+    },
+    { "text": "time to grind ranked", "moods": ["determination"], "kind": "emotion" },
+    { "text": "not giving up until i hit diamond", "moods": ["determination"], "kind": "emotion" },
+    { "text": "on it, boss", "moods": ["acknowledgment", "determination"], "kind": "speech_act" },
+    { "text": "sounds good", "moods": ["acknowledgment"], "kind": "speech_act" },
+    { "text": "ok got it", "moods": ["acknowledgment"], "kind": "speech_act" },
+    { "text": "sure thing", "moods": ["acknowledgment"], "kind": "speech_act" },
+    {
+      "text": "this is too much, i can't handle everything at once",
+      "moods": ["emotional_overwhelm"],
+      "kind": "emotion"
+    },
+    {
+      "text": "that video made me tear up, it's so wholesome",
+      "moods": ["emotional_overwhelm", "joy"],
+      "kind": "emotion"
+    },
+    { "text": "you're so slow lol", "moods": ["teasing", "amusement"], "kind": "emotion" },
+    { "text": "imagine losing to a bot", "moods": ["teasing", "amusement"], "kind": "emotion" },
+    {
+      "text": "sure you 'totally' finished your homework",
+      "moods": ["skepticism", "teasing"],
+      "kind": "emotion"
+    },
+    { "text": "i doubt that'll work but ok", "moods": ["skepticism"], "kind": "emotion" },
+    { "text": "idk, maybe?", "moods": ["confusion", "resignation"], "kind": "emotion" },
+    { "text": "meeting moved to 3pm", "moods": [], "kind": "neutral" },
+    { "text": "the patch notes are in #announcements", "moods": [], "kind": "neutral" },
+    { "text": "i'm using python 3.12", "moods": [], "kind": "neutral" },
+    { "text": "server restarts at midnight utc", "moods": [], "kind": "neutral" },
+    { "text": "the file is on the shared drive", "moods": [], "kind": "neutral" },
+    { "text": "i had pasta for lunch", "moods": [], "kind": "neutral" },
+    { "text": "it's raining here", "moods": [], "kind": "neutral" },
+    { "text": "3 more days until the update", "moods": [], "kind": "neutral" },
+    { "text": "who's hosting tonight", "moods": [], "kind": "neutral" },
+    { "text": "my grandma passed away last night", "moods": [], "kind": "sensitive" },
+    { "text": "my dog died this morning", "moods": [], "kind": "sensitive" },
+    { "text": "i'm so sorry for your loss", "moods": [], "kind": "sensitive" },
+    { "text": "sorry to hear about your dad", "moods": [], "kind": "sensitive" },
+    {
+      "text": "i've been really depressed lately and don't know what to do",
+      "moods": [],
+      "kind": "sensitive"
+    },
+    { "text": "i got laid off today", "moods": [], "kind": "sensitive" },
+    { "text": "the hospital called, it's not good news", "moods": [], "kind": "sensitive" },
+    { "text": "i'm scared about the test results", "moods": [], "kind": "sensitive" },
+    { "text": "there was a shooting near my school", "moods": [], "kind": "sensitive" },
+    { "text": "please stop messaging me", "moods": [], "kind": "sensitive" },
+    { "text": "i'm being serious, this isn't a joke", "moods": [], "kind": "sensitive" },
+    { "text": "great, another monday", "moods": [], "kind": "sarcasm" },
+    { "text": "oh wonderful, the server is down again", "moods": [], "kind": "sarcasm" },
+    { "text": "thanks for nothing", "moods": [], "kind": "sarcasm" },
+    { "text": "yeah right, like that'll happen", "moods": [], "kind": "sarcasm" },
+    { "text": "love waiting in queue for 40 minutes", "moods": [], "kind": "sarcasm" },
+    { "text": "wow so helpful, thanks a lot", "moods": [], "kind": "sarcasm" },
+    {
+      "text": "i'm not happy with how this turned out",
+      "moods": ["disappointment"],
+      "kind": "negation"
+    },
+    { "text": "i don't hate it actually", "moods": ["joy", "acknowledgment"], "kind": "negation" },
+    { "text": "not gonna lie that was fun", "moods": ["joy", "amusement"], "kind": "negation" },
+    { "text": "can't wait for the weekend!", "moods": ["joy", "celebration"], "kind": "negation" },
+    { "text": "i didn't win but i had fun", "moods": ["joy", "resignation"], "kind": "negation" },
+    { "text": "no worries at all", "moods": ["comfort", "acknowledgment"], "kind": "negation" },
+    { "text": "she said she's really upset with me", "moods": [], "kind": "third_person" },
+    { "text": "he was so happy when he got the gift", "moods": ["joy"], "kind": "third_person" },
+    { "text": "they're mad at the mods", "moods": [], "kind": "third_person" },
+    { "text": "my friend thinks the movie was terrible", "moods": [], "kind": "third_person" },
+    {
+      "text": "hey, sorry for the late reply! thanks for waiting",
+      "moods": ["apology", "gratitude", "greeting"],
+      "kind": "speech_act"
+    },
+    {
+      "text": "gg everyone, that was fun",
+      "moods": ["joy", "celebration", "farewell"],
+      "kind": "emotion"
+    },
+    {
+      "text": "ty ty, see you next stream",
+      "moods": ["gratitude", "farewell"],
+      "kind": "speech_act"
+    },
+    { "text": "brb grabbing food", "moods": [], "kind": "neutral" },
+    { "text": "anyone up for minecraft", "moods": ["request"], "kind": "speech_act" },
+    {
+      "text": "this bread i baked came out perfect",
+      "moods": ["joy", "celebration"],
+      "kind": "emotion"
+    },
+    {
+      "text": "my exam got moved and now i have three on the same day",
+      "moods": ["frustration", "emotional_overwhelm"],
+      "kind": "emotion"
+    },
+    {
+      "text": "aaaa i'm so excited for the concert",
+      "moods": ["joy", "celebration"],
+      "kind": "emotion"
+    },
+    { "text": "just hit level 100!", "moods": ["celebration", "joy"], "kind": "emotion" },
+    { "text": "ngl kinda proud of myself", "moods": ["joy", "celebration"], "kind": "emotion" },
+    { "text": "honestly feeling pretty lonely tonight", "moods": ["sadness"], "kind": "emotion" }
+  ]
+}
