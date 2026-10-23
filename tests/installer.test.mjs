@@ -6,7 +6,7 @@ import test from 'node:test';
 
 import {
   classifyLoad,
-  compareVersions,
+  newestAppResources,
   parseArgs,
   parsePatchedAsar,
   readCheckout,
@@ -74,12 +74,31 @@ test('tells source builds from regular downloads', () => {
   }
 });
 
-test('orders Discord app folders by version, not text', () => {
-  const folders = ['1.0.9', '1.0.10', '1.0.9264', '0.0.300'];
-  assert.deepEqual(
-    folders.sort((a, b) => compareVersions(b, a)),
-    ['1.0.9264', '1.0.10', '1.0.9', '0.0.300'],
-  );
+test('finds Equicord source builds from the folder Discord loads', () => {
+  const root = mkdtempSync(join(tmpdir(), 'uwuspeak-test-'));
+  try {
+    mkdirSync(join(root, 'src'));
+    writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'equicord' }));
+    const load = classifyLoad(join(root, 'dist', 'desktop'));
+    assert.equal(load.kind, 'source');
+    assert.equal(load.checkout.client, 'equicord');
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('picks the app folder Vencord installer patches', () => {
+  const root = mkdtempSync(join(tmpdir(), 'uwuspeak-test-'));
+  try {
+    for (const v of ['1.0.10', '1.0.9', '1.0.9264'])
+      mkdirSync(join(root, `app-${v}`, 'resources'), { recursive: true });
+    mkdirSync(join(root, 'app-1.0.9999'));
+    // Vencord's installer compares the folder names as text.
+    assert.equal(newestAppResources(root), join(root, 'app-1.0.9264', 'resources'));
+    assert.equal(newestAppResources(join(root, 'missing')), undefined);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('parses installer options', () => {

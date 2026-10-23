@@ -20,10 +20,28 @@ const VERSION_FILE = '.uwuspeak-version';
 const SNAPSHOT_FILE = '.uwuspeak-snapshot';
 const MIN_NODE = [22, 13];
 
+// `load` is what a patched Discord's app.asar requires and `renderer` holds the plugins, both
+// relative to the source folder; `vesktop` is the folder Vesktop can load, when there is one.
 const CLIENTS = {
-  vencord: { name: 'Vencord', repo: 'Vendicated/Vencord', branch: 'main', env: 'VENCORD' },
-  equicord: { name: 'Equicord', repo: 'Equicord/Equicord', branch: 'main', env: 'EQUICORD' },
+  vencord: {
+    name: 'Vencord',
+    repo: 'Vendicated/Vencord',
+    branch: 'main',
+    load: 'dist/patcher.js',
+    renderer: 'dist/renderer.js',
+    vesktop: 'dist',
+  },
+  equicord: {
+    name: 'Equicord',
+    repo: 'Equicord/Equicord',
+    branch: 'main',
+    load: 'dist/desktop',
+    renderer: 'dist/desktop/renderer.js',
+  },
 };
+
+const inCheckout = (checkout, rel) => path.join(checkout.dir, ...rel.split('/'));
+const samePath = (a, b) => Boolean(a && b) && path.resolve(a) === path.resolve(b);
 
 const win = process.platform === 'win32';
 const mac = process.platform === 'darwin';
@@ -572,27 +590,19 @@ export function readCheckout(dir) {
   }
 }
 
-/** Describes what a patcher path or Vesktop vencordDir points at. */
-export function classifyLoad(distDir) {
-  if (!distDir) return { kind: 'none' };
-  const root = path.dirname(distDir);
-  const checkout = readCheckout(root);
-  if (checkout) return { kind: 'source', checkout };
-  const lower = distDir.toLowerCase();
+/** Describes what a patched app.asar requires or a Vesktop vencordDir points at. */
+export function classifyLoad(loaded) {
+  if (!loaded) return { kind: 'none' };
+  // dist, dist/patcher.js or dist/desktop: the source folder is a few levels up.
+  for (let dir = path.dirname(loaded), i = 0; i < 3; dir = path.dirname(dir), i++) {
+    const checkout = readCheckout(dir);
+    if (checkout) return { kind: 'source', checkout };
+  }
+  const lower = loaded.toLowerCase();
   if (lower.includes('equicord')) return { kind: 'prebuilt', client: 'equicord' };
   if (lower.includes('vencord') || lower.includes('vesktop'))
     return { kind: 'prebuilt', client: 'vencord' };
-  return { kind: 'other', path: distDir };
-}
-
-export function compareVersions(a, b) {
-  const pa = a.split(/[.-]/).map(Number);
-  const pb = b.split(/[.-]/).map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const d = (pa[i] || 0) - (pb[i] || 0);
-    if (d) return d;
-  }
-  return 0;
+  return { kind: 'other', path: loaded };
 }
 
 const isDir = (p) => {
@@ -615,13 +625,16 @@ const branchOf = (name) => {
   return Object.keys(BRANCHES).find((b) => b !== 'stable' && lower.includes(b)) ?? 'stable';
 };
 
-/** Newest app-x.y.z/resources folder inside a Discord folder, for installs that update in place. */
-function newestAppResources(base) {
+/**
+ * The app-x.y.z/resources folder that Vencord's installer patches, for installs that update in
+ * place. It picks the last one in plain text order, so this must too.
+ */
+export function newestAppResources(base) {
   if (!isDir(base)) return undefined;
   const apps = readdirSync(base)
     .filter((n) => /^app-\d/.test(n) && isDir(path.join(base, n, 'resources')))
-    .sort((a, b) => compareVersions(b.slice(4), a.slice(4)));
-  return apps.length ? path.join(base, apps[0], 'resources') : undefined;
+    .sort();
+  return apps.length ? path.join(base, apps.at(-1), 'resources') : undefined;
 }
 
 function discordInstall({ branch, location, resources, flatpak = false, exe, start }) {
@@ -636,7 +649,7 @@ function discordInstall({ branch, location, resources, flatpak = false, exe, sta
   const id = (branch === 'stable' ? 'discord' : `discord-${branch}`) + (flatpak ? '-flatpak' : '');
   const load = patched
     ? patcher
-      ? classifyLoad(path.dirname(patcher))
+      ? classifyLoad(patcher)
       : { kind: 'other', path: resources }
     : { kind: 'none' };
   return {
@@ -1073,36 +1086,35 @@ async function buildCheckout(checkout) {
 
 function buildIncludesPlugin(checkout) {
   try {
-    return readFileSync(path.join(checkout.dir, 'dist', 'renderer.js'), 'utf8').includes(
-      PLUGIN_NAME,
-    );
+    const renderer = inCheckout(checkout, CLIENTS[checkout.client].renderer);
+    return readFileSync(renderer, 'utf8').includes(PLUGIN_NAME);
   } catch {
     return false;
   }
 }
 
-/** Points a Discord install at the checkout's build using Vencord's own installer. */
+/** Points a Discord install at the checkout's build using the client's own installer. */
 async function patchDiscord(target, checkout) {
-  const dist = path.join(checkout.dir, 'dist');
+  const expected = inCheckout(checkout, CLIENTS[checkout.client].load);
+  // The same variables the checkout's scripts/runInstaller.mjs sets, for the sudo retry below.
   const env = { ...buildEnv(checkout) };
   for (const prefix of ['VENCORD', 'EQUICORD']) {
     env[`${prefix}_USER_DATA_DIR`] = checkout.dir;
     env[`${prefix}_DEV_INSTALL`] = '1';
   }
-  const patchedHere = () => {
-    const now = discordInstall({ ...target });
-    return now?.patcher && path.resolve(path.dirname(now.patcher)) === path.resolve(dist);
-  };
+  env.EQUICORD_DIRECTORY = inCheckout(checkout, CLIENTS.equicord.load);
+  const patchedHere = () => samePath(discordInstall({ ...target })?.patcher, expected);
+  // runInstaller.mjs exits successfully even when the patch fails, so check the result instead.
+  let output = '';
   await task(`Pointing ${target.label} at ${CLIENTS[checkout.client].name}`, (update) =>
     run(
       process.execPath,
       ['scripts/runInstaller.mjs', '--', '--install', '--location', target.location],
-      {
-        cwd: checkout.dir,
-        env,
-        update,
-      },
-    ).catch(() => {}),
+      { cwd: checkout.dir, env, update },
+    ).then(
+      (text) => (output = text),
+      (e) => (output = e.tail?.join('\n') ?? e.message),
+    ),
   );
   if (patchedHere()) return;
   // System-wide Linux installs are owned by root; run the downloaded installer again with sudo.
@@ -1117,7 +1129,12 @@ async function patchDiscord(target, checkout) {
       if (patchedHere()) return;
     }
   }
-  const hints = [`See ${logPath} for details.`];
+  const hints = output
+    .split(/\r?\n/)
+    .map((l) => strip(l).trim())
+    .filter(Boolean)
+    .slice(-6);
+  hints.push(`See ${logPath} for details.`);
   if (mac)
     hints.unshift(
       'macOS may be blocking changes to apps: allow your terminal under System Settings > Privacy & Security > App Management, then run this again.',
@@ -1148,7 +1165,7 @@ function installerBinary(checkout) {
 }
 
 async function pointVesktop(target, checkout) {
-  const dist = path.join(checkout.dir, 'dist');
+  const dist = inCheckout(checkout, CLIENTS[checkout.client].vesktop);
   await task(`Pointing ${target.label} at ${CLIENTS[checkout.client].name}`, async () => {
     const file = path.join(target.dataDir, 'state.json');
     let state = {};
@@ -1435,11 +1452,15 @@ async function install(opts, saved, targets, tools) {
   );
   const restartable = [];
   for (const t of chosen) {
-    const dist = path.join(fresh.dir, 'dist');
+    const client = CLIENTS[fresh.client];
+    if (t.app === 'vesktop' && !client.vesktop) {
+      warn(`Skipped ${t.label}: it can't load ${client.name}. Use Vencord for Vesktop.`);
+      continue;
+    }
     const connected =
       t.app === 'discord'
-        ? t.patcher && path.resolve(path.dirname(t.patcher)) === path.resolve(dist)
-        : t.vencordDir && path.resolve(t.vencordDir) === path.resolve(dist);
+        ? samePath(t.patcher, inCheckout(fresh, client.load))
+        : samePath(t.vencordDir, inCheckout(fresh, client.vesktop));
     const isRunning = runningProcesses().has(t.exe.toLowerCase());
     let closed = !isRunning;
     if (isRunning && opts.restart) {

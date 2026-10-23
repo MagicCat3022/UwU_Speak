@@ -84,13 +84,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: |
-          node tests/installer-e2e.mjs fake "$env:LOCALAPPDATA\DiscordCanary\app-1.0.9\resources"
-          node tests/installer-e2e.mjs fake "$env:LOCALAPPDATA\DiscordCanary\app-1.0.10\resources"
+          node tests/installer-e2e.mjs fake "$env:LOCALAPPDATA\DiscordCanary\app-1.0.9263\resources"
+          node tests/installer-e2e.mjs fake "$env:LOCALAPPDATA\DiscordCanary\app-1.0.9264\resources"
           $env:UWUSPEAK_INSTALLER = "$pwd\release\installer.mjs"
           $env:UWUSPEAK_ARGS = "--yes --no-git --no-restart --target discord-canary --dir $env:RUNNER_TEMP\Vencord --plugin $pwd\release\uwuSpeak.tar.gz"
           iex (Get-Content -Raw release\install.ps1)
           if ($LASTEXITCODE -ne 0) { throw "Installer failed with $LASTEXITCODE" }
-          node tests/installer-e2e.mjs verify "$env:RUNNER_TEMP\Vencord" "$env:LOCALAPPDATA\DiscordCanary\app-1.0.10\resources" "$env:APPDATA\Vencord\settings\settings.json"
+          node tests/installer-e2e.mjs verify "$env:RUNNER_TEMP\Vencord" "$env:LOCALAPPDATA\DiscordCanary\app-1.0.9264\resources" "$env:APPDATA\Vencord\settings\settings.json"
           if ($LASTEXITCODE -ne 0) { throw 'Verification failed' }
 
       - name: Install into a fake Discord (Linux)
@@ -110,12 +110,13 @@ jobs:
           grep -q "Update UwUSpeak" update.log
           node tests/installer-e2e.mjs verify "$RUNNER_TEMP/Vencord"
 
-      - name: Build into Equicord (Linux)
+      - name: Install into Equicord and a fake Discord PTB (Linux)
         if: runner.os == 'Linux'
         run: |
+          node tests/installer-e2e.mjs fake ~/.config/discordptb/app-0.0.200/resources
           UWUSPEAK_INSTALLER="$PWD/release/installer.mjs" bash release/install.sh \
-            --yes --target none --client equicord --dir "$RUNNER_TEMP/Equicord" --plugin "$PWD/release/uwuSpeak.tar.gz"
-          node tests/installer-e2e.mjs verify "$RUNNER_TEMP/Equicord"
+            --yes --no-restart --target discord-ptb --client equicord --dir "$RUNNER_TEMP/Equicord" --plugin "$PWD/release/uwuSpeak.tar.gz"
+          node tests/installer-e2e.mjs verify "$RUNNER_TEMP/Equicord" ~/.config/discordptb/app-0.0.200/resources ~/.config/Equicord/settings/settings.json
 
       - name: Drive the menus with the keyboard (Linux)
         if: runner.os == 'Linux'
