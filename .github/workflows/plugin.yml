@@ -110,6 +110,15 @@ jobs:
           grep -q "Update UwUSpeak" update.log
           node tests/installer-e2e.mjs verify "$RUNNER_TEMP/Vencord"
 
+      - name: Skip the rebuild when up to date (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # The latest published release, then a second run that must find nothing to do.
+          UWUSPEAK_INSTALLER="$PWD/release/installer.mjs" bash release/install.sh --yes --target none --dir "$RUNNER_TEMP/Latest"
+          UWUSPEAK_INSTALLER="$PWD/release/installer.mjs" bash release/install.sh --yes --target none --dir "$RUNNER_TEMP/Latest" | tee skip.log
+          grep -q "already installed and built" skip.log
+          ! grep -q "Building Vencord" skip.log
+
       - name: Install into Equicord and a fake Discord PTB (Linux)
         if: runner.os == 'Linux'
         run: |

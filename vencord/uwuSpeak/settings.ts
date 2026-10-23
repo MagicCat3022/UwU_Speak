@@ -82,6 +82,17 @@ export const settings = definePluginSettings({
         description: "Use a small AI model to spot moods the keyword rules miss, like joy or amusement, so more messages get a fitting face. It runs on your computer, so messages aren't sent anywhere. Downloads about 30 MB once and uses about 100 MB of memory while on. Needs \"Detect from message\".",
         default: false,
     },
+    updateNotifications: {
+        type: OptionType.BOOLEAN,
+        description: "Tell me when a new UwUSpeak version is out. Checks GitHub at startup and twice a day; nothing about you is sent.",
+        default: true,
+    },
+    notifiedVersion: {
+        type: OptionType.STRING,
+        description: "The newest release you were already told about.",
+        default: "",
+        hidden: true,
+    },
     customize: {
         type: OptionType.BOOLEAN,
         description: "Override the intensity preset with the advanced settings below.",

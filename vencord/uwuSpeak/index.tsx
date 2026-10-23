@@ -9,6 +9,8 @@ import { buildOptions, moodText, Overrides, uwuify } from "./convert";
 import { convert, type Intensity, miniLmCutoff, type Style } from "./engine";
 import { detectMoods, moodStatus, topScores, unloadMoodModel } from "./mood";
 import { settings } from "./settings";
+import { newerRelease, startUpdateChecks, stopUpdateChecks, updateCommand } from "./update";
+import { VERSION } from "./version";
 
 const logger = new Logger("UwUSpeak");
 
@@ -176,9 +178,14 @@ export default definePlugin({
         render: SendAsUwuButton,
     },
 
+    start() {
+        startUpdateChecks();
+    },
+
     stop() {
         disarm();
         unloadMoodModel();
+        stopUpdateChecks();
     },
 
     async onBeforeMessageSend(channelId, message) {
@@ -193,6 +200,17 @@ export default definePlugin({
     },
 
     commands: [{
+        name: "uwu-update",
+        description: "Check for a newer UwUSpeak and show how to update (only you see it)",
+        inputType: ApplicationCommandInputType.BUILT_IN,
+        async execute(_, { channel }) {
+            const latest = await newerRelease();
+            const status = latest
+                ? `**UwUSpeak ${latest} is available** (you have v${VERSION}).`
+                : `You have UwUSpeak v${VERSION}, the latest version (or GitHub couldn't be reached).`;
+            notify(channel.id, `${status}\nTo update, run this, then restart Discord:\n\`\`\`\n${updateCommand}\n\`\`\``);
+        },
+    }, {
         name: "uwu-why",
         description: "Show what the mood model detects and why a face would or wouldn't be added (only you see it)",
         inputType: ApplicationCommandInputType.BUILT_IN,

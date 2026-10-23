@@ -1,6 +1,7 @@
-// Main-process helpers for the optional mood model. Discord's content security policy blocks
-// Hugging Face in the renderer, so the model is downloaded here, once, into Vencord's data folder
-// and handed to the renderer file by file. Only the pinned files below are ever fetched or read.
+// Main-process helpers for the optional mood model and the update check. Discord's content
+// security policy blocks Hugging Face and GitHub in the renderer, so the model is downloaded here,
+// once, into Vencord's data folder and handed to the renderer file by file. Only the pinned files
+// below are ever fetched or read.
 import { DATA_DIR } from "@main/utils/constants";
 import { createHash } from "crypto";
 import { IpcMainInvokeEvent } from "electron";
@@ -58,4 +59,19 @@ export function ensureModel(_: IpcMainInvokeEvent): Promise<void> {
 export async function readModelFile(_: IpcMainInvokeEvent, name: string): Promise<Uint8Array | null> {
     if (!Object.hasOwn(FILES, name)) return null;
     return await readVerified(name) ?? null;
+}
+
+/** The tag of the latest UwUSpeak release, such as "v0.3.0", or null when GitHub can't be reached. */
+export async function latestRelease(_: IpcMainInvokeEvent): Promise<string | null> {
+    try {
+        // The redirect to the release page names the tag, without using GitHub's rate-limited API.
+        const res = await fetch("https://github.com/MagicCat3022/UwU_Speak/releases/latest", {
+            redirect: "manual",
+            signal: AbortSignal.timeout(10_000),
+        });
+        const tag = res.headers.get("location")?.match(/\/releases\/tag\/([^/?#]+)$/)?.[1];
+        return tag ? decodeURIComponent(tag) : null;
+    } catch {
+        return null;
+    }
 }

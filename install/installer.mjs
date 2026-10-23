@@ -79,6 +79,7 @@ Usage: install [options]
       --plugin <file>    Install the plugin from a local uwuSpeak.tar.gz instead
       --no-git           Download Vencord as a snapshot even if git is installed
       --no-update        Don't update an existing Vencord/Equicord folder
+      --reinstall        Download and rebuild even when everything is up to date
       --no-restart       Don't close or start Discord/Vesktop
       --dry-run          Show what would happen without changing anything
   -h, --help             Show this help`;
@@ -125,6 +126,9 @@ export function parseArgs(argv) {
         break;
       case '--no-git':
         opts.git = false;
+        break;
+      case '--reinstall':
+        opts.reinstall = true;
         break;
       case '--no-update':
         opts.update = false;
@@ -1041,14 +1045,13 @@ async function getPluginArchive(opts, temp, update) {
   return { archive, version: tag };
 }
 
-async function installPlugin(archive, version, checkout) {
+async function installPlugin(archive, checkout) {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'uwuspeak-plugin-'));
   try {
     await extract(archive, temp);
     const source = path.join(temp, PLUGIN_DIR);
     if (!existsSync(path.join(source, 'index.tsx')))
       throw new Error("The plugin download doesn't contain the plugin.");
-    await fs.writeFile(path.join(source, VERSION_FILE), version + '\n');
     const userplugins = path.join(checkout.dir, 'src', 'userplugins');
     const target = path.join(userplugins, PLUGIN_DIR);
     await fs.mkdir(userplugins, { recursive: true });
@@ -1057,6 +1060,15 @@ async function installPlugin(archive, version, checkout) {
   } finally {
     await fs.rm(temp, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/**
+ * Records the installed version. Written only after a successful build, so a version that matches
+ * the latest release means that release is installed and built, and the rebuild can be skipped.
+ */
+async function markInstalled(checkout, version) {
+  const file = path.join(checkout.dir, 'src', 'userplugins', PLUGIN_DIR, VERSION_FILE);
+  await fs.writeFile(file, version + '\n');
 }
 
 function installedVersion(dir) {
@@ -1191,6 +1203,15 @@ function settingsDirFor(target, client) {
     ? path.join(home, '.var/app', `com.discordapp.${target.exe}`, 'config')
     : configHome;
   return path.join(base, CLIENTS[client].name, 'settings');
+}
+
+function pluginEnabled(target, client) {
+  try {
+    const file = path.join(settingsDirFor(target, client), 'settings.json');
+    return JSON.parse(readFileSync(file, 'utf8')).plugins?.[PLUGIN_NAME]?.enabled === true;
+  } catch {
+    return false;
+  }
 }
 
 /** Turns the plugin on in Vencord's settings.json. Only safe while the app is closed. */
@@ -1364,21 +1385,25 @@ async function install(opts, saved, targets, tools) {
     else updateSource = await confirm(`Update ${name} to its latest version first?`, true);
   }
 
+  // The plugin is current when the release it would download is the one already built here.
+  const pluginCurrent =
+    !isNew &&
+    !opts.reinstall &&
+    Boolean(opts.latest) &&
+    installedVersion(checkout.dir) === opts.latest;
+  const pnpmLabel = `pnpm ${checkout.pnpm ?? c.dim('(version from the download)')}`;
   heading('Plan');
   const plan = [
     [
       isNew ? `Download ${name}` : `Use ${name}`,
       checkout.dir + (isNew ? c.dim(snapshot ? ' (snapshot)' : ' (git clone)') : ''),
     ],
-    [
-      'Install UwUSpeak',
-      opts.plugin
-        ? opts.plugin
-        : opts.release && opts.release !== 'latest'
-          ? opts.release
-          : 'latest release',
-    ],
-    ['Build', `${name} with pnpm ${checkout.pnpm ?? c.dim('(version from the download)')}`],
+    pluginCurrent
+      ? ['UwUSpeak', `${opts.latest} ${c.dim('(already installed)')}`]
+      : ['Install UwUSpeak', opts.plugin ?? opts.latest ?? opts.release ?? 'latest release'],
+    pluginCurrent
+      ? ['Build', c.dim(`only if ${name} changes`)]
+      : ['Build', `${name} with ${pnpmLabel}`],
   ];
   if (updateSource)
     plan.splice(1, 0, [`Update ${name}`, snapshot ? 'download the latest snapshot' : 'git pull']);
@@ -1393,6 +1418,7 @@ async function install(opts, saved, targets, tools) {
   if (!(await confirm('Continue?', true))) throw new Cancelled();
   say();
 
+  let sourceChanged = isNew;
   if (isNew) {
     await task(`Downloading ${name}`, (update) =>
       snapshot
@@ -1404,38 +1430,48 @@ async function install(opts, saved, targets, tools) {
       const current = readSnapshot(checkout.dir)?.sha;
       const latest = await latestCommit(checkout.client);
       if (latest && latest === current) ok(`${name} is already up to date`);
-      else
+      else {
         await task(`Updating ${name}`, (update) =>
           downloadSnapshot(checkout.client, checkout.dir, update),
         );
+        sourceChanged = true;
+      }
     } else {
       const result = await task(`Updating ${name}`, (update) => updateGit(checkout.dir, update));
-      if (result !== 'updated') note(`${name} update ${result}.`);
+      if (result === 'updated') sourceChanged = true;
+      else note(`${name} update ${result}.`);
     }
   }
   const fresh = readCheckout(checkout.dir);
   if (!fresh)
     throw new Error(`${checkout.dir} doesn't look like a ${name} folder after downloading.`);
 
-  const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'uwuspeak-'));
-  let version;
-  try {
-    const plugin = await task('Downloading UwUSpeak', (update) =>
-      getPluginArchive(opts, temp, update),
-    );
-    version = plugin.version;
-    await task(`Adding UwUSpeak ${version} to ${name}`, () =>
-      installPlugin(plugin.archive, version, fresh),
-    );
-  } finally {
-    await fs.rm(temp, { recursive: true, force: true }).catch(() => {});
+  let version = opts.latest;
+  if (!pluginCurrent) {
+    const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'uwuspeak-'));
+    try {
+      const plugin = await task('Downloading UwUSpeak', (update) =>
+        getPluginArchive({ ...opts, release: opts.latest ?? opts.release }, temp, update),
+      );
+      version = plugin.version;
+      await task(`Adding UwUSpeak ${version} to ${name}`, () =>
+        installPlugin(plugin.archive, fresh),
+      );
+    } finally {
+      await fs.rm(temp, { recursive: true, force: true }).catch(() => {});
+    }
   }
 
-  await buildCheckout(fresh);
-  if (!buildIncludesPlugin(fresh))
-    throw new CommandError(`The ${name} build finished but doesn't include UwUSpeak.`, [
-      `See ${logPath}.`,
-    ]);
+  // An up-to-date plugin still needs a build when Vencord changed or the last build is missing.
+  const rebuilt = !pluginCurrent || sourceChanged || !buildIncludesPlugin(fresh);
+  if (rebuilt) {
+    await buildCheckout(fresh);
+    if (!buildIncludesPlugin(fresh))
+      throw new CommandError(`The ${name} build finished but doesn't include UwUSpeak.`, [
+        `See ${logPath}.`,
+      ]);
+    await markInstalled(fresh, version);
+  } else ok(`UwUSpeak ${version} is already installed and built`);
 
   await saveState({
     ...saved,
@@ -1463,6 +1499,8 @@ async function install(opts, saved, targets, tools) {
         : samePath(t.vencordDir, inCheckout(fresh, client.vesktop));
     const isRunning = runningProcesses().has(t.exe.toLowerCase());
     let closed = !isRunning;
+    // Nothing to load when the build didn't change and the app already uses it.
+    if (connected && !rebuilt && pluginEnabled(t, fresh.client)) continue;
     if (isRunning && opts.restart) {
       const why = connected ? 'to load the new build' : 'to finish setting it up';
       if (await confirm(`${t.label} is running. Close it now ${why}?`, true)) {
@@ -1502,12 +1540,18 @@ async function install(opts, saved, targets, tools) {
     }
 
   say();
+  const label = version === 'local build' ? '(local build)' : version;
+  if (!rebuilt && !restartable.length) {
+    box([
+      c.bold(c.green(`UwUSpeak ${label} is up to date`)) + ' ' + (unicode ? '(◕ᴗ◕✿)' : 'uwu'),
+      '',
+      'Nothing needed changing.',
+      c.dim(`Discord shows a notification when a new version is out.`),
+    ]);
+    return;
+  }
   const doneLines = [
-    c.bold(
-      c.green(`UwUSpeak ${version === 'local build' ? '(local build)' : version} is installed`),
-    ) +
-      ' ' +
-      (unicode ? '(◕ᴗ◕✿)' : 'uwu'),
+    c.bold(c.green(`UwUSpeak ${label} is installed`)) + ' ' + (unicode ? '(◕ᴗ◕✿)' : 'uwu'),
     '',
     `Type ${c.cyan('/uwu')} in any chat, or use the UwU button next to the message box.`,
     `Settings: Settings > ${name} > Plugins > UwUSpeak`,
@@ -1629,25 +1673,43 @@ async function main() {
   const installedIn = [saved.dir, ...targets.map((t) => t.load.checkout?.dir)].find(
     (d) => d && installedVersion(d),
   );
-  if (installedIn)
-    rows.push(['UwUSpeak', `${installedVersion(installedIn)} ${c.dim(`in ${installedIn}`)}`]);
+  // Knowing the latest release up front lets an up-to-date install skip the rebuild. Offline, the
+  // download step reports the problem instead.
+  if (!opts.plugin && !opts.uninstall)
+    opts.latest = await resolveRelease(opts.release).catch((e) => void log(e.message));
+  const installed = installedIn && installedVersion(installedIn);
+  const upToDate = Boolean(opts.latest) && installed === opts.latest;
+  if (installedIn) {
+    const status = upToDate
+      ? c.green('(latest)')
+      : opts.latest
+        ? c.yellow(`${sym.arrow} ${opts.latest} available`)
+        : '';
+    rows.push(['UwUSpeak', `${installed} ${status} ${c.dim(`in ${installedIn}`)}`]);
+  }
   table(rows);
   say();
 
-  const action = opts.uninstall
-    ? 'uninstall'
-    : await select('What would you like to do?', [
-        {
-          label: installedIn ? 'Update UwUSpeak' : 'Install UwUSpeak',
-          value: 'install',
-          hint: 'also repairs Discord after an update',
-        },
-        { label: 'Uninstall UwUSpeak', value: 'uninstall' },
-        { label: 'Quit', value: 'quit' },
-      ]);
+  const installItem = !installedIn
+    ? { label: 'Install UwUSpeak', value: 'install' }
+    : upToDate
+      ? { label: 'Check for updates', value: 'install', hint: 'updates Vencord, repairs Discord' }
+      : { label: `Update UwUSpeak${opts.latest ? ` to ${opts.latest}` : ''}`, value: 'install' };
+  installItem.hint ??= 'also repairs Discord after an update';
+  const items = [installItem];
+  if (installedIn)
+    items.push({ label: 'Reinstall UwUSpeak', value: 'reinstall', hint: 'download and rebuild' });
+  items.push({ label: 'Uninstall UwUSpeak', value: 'uninstall' }, { label: 'Quit', value: 'quit' });
+  const action = opts.uninstall ? 'uninstall' : await select('What would you like to do?', items);
   if (action === 'quit') return;
   if (action === 'uninstall') await uninstall(opts, saved, targets);
-  else await install(opts, saved, targets, tools);
+  else
+    await install(
+      { ...opts, reinstall: opts.reinstall || action === 'reinstall' },
+      saved,
+      targets,
+      tools,
+    );
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
