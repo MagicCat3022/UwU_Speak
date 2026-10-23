@@ -1,6 +1,6 @@
 {
   "name": "uwu-speak",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "A local-first UwU and nya text converter with a shared browser and API engine.",
