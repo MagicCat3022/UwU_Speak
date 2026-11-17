@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
-import { resolve } from 'node:path';
+import { build } from 'esbuild';
 import { convert } from '../../src/core/index';
 import type { ConversionOptions } from '../../src/core/types';
-import { baseline, exact, fragments } from '../fixtures';
+import { baseline, exact, fragments } from '../../tests/fixtures';
 import dictionary from '../../data/emoticons.json' with { type: 'json' };
 
 async function ready(page: Page) {
@@ -45,12 +45,16 @@ async function spellingOnlyWhenOpen(page: Page) {
     if (await page.locator('#rate-' + rate).isEnabled())
       await page.locator('#rate-' + rate).fill('0');
 }
-test('built browser engine and HTTP adapter match Node fixtures and seeded diagnostics', async ({
-  page,
-  request,
-}) => {
+test('the engine in Chromium matches Node fixtures and seeded diagnostics', async ({ page }) => {
+  const bundle = await build({
+    entryPoints: ['src/core/index.ts'],
+    bundle: true,
+    format: 'esm',
+    target: 'es2022',
+    write: false,
+  });
   await page.route('**/__core.mjs', (route) =>
-    route.fulfill({ path: resolve('dist/library/index.js'), contentType: 'text/javascript' }),
+    route.fulfill({ body: bundle.outputFiles[0].text, contentType: 'text/javascript' }),
   );
   await page.goto('/');
   await ready(page);
@@ -78,12 +82,8 @@ test('built browser engine and HTTP adapter match Node fixtures and seeded diagn
     const { convert } = await import(url);
     return cases.map(({ text, options }) => convert(text, options));
   }, cases);
-  for (const [index, { text, options }] of cases.entries()) {
-    const core = convert(text, options);
-    expect(browserResults[index]).toEqual(core);
-    const response = await request.post('/v1/convert', { data: { text, options } });
-    expect(await response.json()).toEqual(core);
-  }
+  for (const [index, { text, options }] of cases.entries())
+    expect(browserResults[index]).toEqual(convert(text, options));
 });
 test('conversion works offline after load, with safe text rendering and validation', async ({
   page,
@@ -93,10 +93,8 @@ test('conversion works offline after load, with safe text rendering and validati
   await ready(page);
   await spellingOnly(page);
   await ready(page);
-  const conversions: string[] = [];
-  page.on('request', (request) => {
-    if (request.url().includes('/v1/convert')) conversions.push(request.url());
-  });
+  const requests: string[] = [];
+  page.on('request', (request) => requests.push(request.url()));
   await context.setOffline(true);
   const source = '<img src=x onerror=alert(1)> Hello 👩🏽‍💻';
   await page.locator('#input-text').fill(source);
@@ -109,7 +107,7 @@ test('conversion works offline after load, with safe text rendering and validati
   await expect(page.locator('#copy-button')).toBeDisabled();
   await page.locator('#input-text').fill('Hello again!');
   await expect(page.locator('#highlight-output')).toHaveText('Hewwo again!');
-  expect(conversions).toEqual([]);
+  expect(requests).toEqual([]);
 });
 test('dictionary search, intent filter, source notes and copying', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);

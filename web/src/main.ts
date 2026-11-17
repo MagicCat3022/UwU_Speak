@@ -1,6 +1,6 @@
 import './style.css';
 import dictionary from '../../data/emoticons.json' with { type: 'json' };
-import { intents, resolveOptions, versions } from '../core/index.js';
+import { intents, resolveOptions, versions } from '../../src/core/index.js';
 import { showWiki } from './wiki.js';
 import type {
   ConversionOptions,
@@ -8,7 +8,7 @@ import type {
   Intensity,
   Style,
   Rates,
-} from '../core/types.js';
+} from '../../src/core/types.js';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const field = (id: string) => $<HTMLInputElement>(id);

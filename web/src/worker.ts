@@ -1,5 +1,5 @@
-import { convert, ConversionError } from '../core/index.js';
-import type { ConversionOptions } from '../core/types.js';
+import { convert, ConversionError } from '../../src/core/index.js';
+import type { ConversionOptions } from '../../src/core/types.js';
 self.addEventListener(
   'message',
   (event: MessageEvent<{ id: number; text: string; options: ConversionOptions }>) => {

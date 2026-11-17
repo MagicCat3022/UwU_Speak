@@ -364,7 +364,7 @@ test('strict runtime validation, defaults and nested option merging', () => {
   assert.equal(run('😀'.repeat(100_000)).text.length, 200_000);
   assert.throws(
     () => run('x'.repeat(100_001)),
-    (e: unknown) => e instanceof ConversionError && e.status === 413,
+    (e: unknown) => e instanceof ConversionError && e.code === 'INPUT_TOO_LARGE',
   );
 });
 test('diagnostics are bounded independently of conversion', () => {

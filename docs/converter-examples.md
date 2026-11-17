@@ -56,7 +56,7 @@ Start from the same zero-rate baseline and override only the named rates; use th
 | B13 | `My cat is missing.`; nya/medium; nya, tilde, and emoticon rates 1 | No playful cat face, nya particle, or cheerful flourish. An unsupported emotional cue should produce the uncertain state and suppress new expression. |
 | B14 | `I'm sorry your day was so rough. I'm here for you.`; emoticon rate 1 | Treat the support offer as comfort, not an admission of responsibility. A fitting comfort face may follow the second sentence. Do not add an apology bow merely from `sorry`. |
 | B15 | Technical and Unicode fragments listed below; all rates 1 in nya style | Preserve every protected fragment and complete Unicode sequence exactly. Do not attach an ending to a segment containing only protected content. Handle punctuation without swallowing adjacent prose. |
-| B16 | `Hello! Thanks for the tea.`; all applicable rates 1; repeat with seed `review` and diagnostics on/off in browser and API | Same resolved options and versions yield identical text across runtimes and report modes. All reported offsets map correctly to original/final strings. Changing seed may change a choice, but need not do so when only one candidate is eligible. |
+| B16 | `Hello! Thanks for the tea.`; all applicable rates 1; repeat with seed `review` and diagnostics on/off in Node and Chromium | Same resolved options and versions yield identical text across runtimes and report modes. All reported offsets map correctly to original/final strings. Changing seed may change a choice, but need not do so when only one candidate is eligible. |
 
 For B15, exercise each fragment alone and between two simple prose words:
 
@@ -80,4 +80,4 @@ Review representative actual outputs for four properties: preservation of the me
 
 Use diagnostics to inspect rejected candidates and protected spans. Do not change a test's expected output merely because the implementation produced something different; first decide whether the implementation or the specification should change. Add newly discovered edge cases to this collection and the appropriate automated fixtures.
 
-Keep structural tests separate from subjective ratings: exact text, whitespace, cluster preservation, budget accounting, and browser/API equivalence are testable properties. Naturalness and community preferences require human review. The implementation also needs validation and size-limit checks from the main spec; these 40 examples are a starter review set, not an exhaustive test suite.
+Keep structural tests separate from subjective ratings: exact text, whitespace, cluster preservation, budget accounting, and cross-runtime equivalence are testable properties. Naturalness and community preferences require human review. The implementation also needs validation and size-limit checks from the main spec; these 40 examples are a starter review set, not an exhaustive test suite.
