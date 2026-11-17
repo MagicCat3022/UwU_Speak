@@ -77,7 +77,7 @@ The existing face inventory is finite. Version 0.1.0 also preserves bounded pare
 
 Store and load the file as UTF-8. Keep significant spaces, combining marks, backslashes, and fullwidth characters. The shrug contains one displayed backslash, represented as `\\` in JSON. Do not lowercase faces or apply compatibility normalization such as NFKC to their display strings.
 
-Treat complete grapheme clusters as indivisible at recognition and edit boundaries. Preserve combining accents, emoji modifiers, and joined emoji without detaching parts of their character sequences. Use the shared versioned boundary implementation specified by the converter for consistent browser/API behavior.
+Treat complete grapheme clusters as indivisible at recognition and edit boundaries. Preserve combining accents, emoji modifiers, and joined emoji without detaching parts of their character sequences. Use the shared versioned boundary implementation specified by the converter for consistent behavior in every runtime.
 
 In a browser, render input and output as text, such as through `textContent`. For Markdown output, escape at rendering time rather than storing Markdown escapes in the dictionary. Characters such as `*`, `_`, `>`, and backslashes belong to the faces themselves.
 

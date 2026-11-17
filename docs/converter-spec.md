@@ -1,12 +1,12 @@
 # UwU converter specification
 
-Status: implemented in version 0.1.0. The shared TypeScript converter, local browser interface, and HTTP adapter are available. See [implementation notes](implementation.md) for concrete algorithms, validation limits, and verification results.
+Status: implemented in version 0.1.0. The shared TypeScript converter runs in the local browser app and the Vencord plugin. See [implementation notes](implementation.md) for concrete algorithms, validation limits, and verification results.
 
 Revised 2026-09-21 to include the agreed implementation-review refinements.
 
 ## Purpose and approach
 
-Convert an English input string into recognizable UwU or nya speech while retaining its message, word order, and formatting. Use a shared, deterministic TypeScript rules engine that can run in a browser or behind an HTTP API.
+Convert an English input string into recognizable UwU or nya speech while retaining its message, word order, and formatting. Use a shared, deterministic TypeScript rules engine that runs in the browser app and in the Discord plugin.
 
 The first version uses explicit vocabulary, spelling rules, and optional expression. A trained model is unnecessary for these transformations. Contextual paraphrasing or character dialogue would be a separate future feature with its own evaluation.
 
@@ -198,13 +198,13 @@ This remains heuristic context matching. Sarcasm, indirect speech, and mixed emo
 
 ## Determinism and versions
 
-The same input, fully resolved conversion options, seed, engine version, spelling-rule version, segmentation version, and emoticon-dictionary version must produce the same output in the browser and API. Enabling diagnostics must not change the output text.
+The same input, fully resolved conversion options, seed, engine version, spelling-rule version, segmentation version, and emoticon-dictionary version must produce the same output in every runtime: Node, the browser app, and the Discord plugin. Enabling diagnostics must not change the output text.
 
 Use versioned deterministic sampling rather than `Math.random()`. Derive each decision from the seed, rule ID, and original source position, with a distinct decision key for face selection versus rate checks. Define the exact hash/PRNG and its cross-runtime golden vectors when implementing the engine; changing that algorithm requires an engine-version change. Original positions should use UTF-16 offsets for consistent JavaScript indexing, while the public input limit and short-message threshold count Unicode code points.
 
-Ship the same versioned tokenization rules and Unicode boundary data in the browser and API builds, and expose their combined revision as `segmentationVersion`. Do not make output decisions depend on the host's default locale or unpinned `Intl.Segmenter` behavior. The ECMAScript specification allows implementation-dependent segmentation, so a shared seed alone does not establish identical output across runtimes. [ECMAScript boundary determination](https://tc39.es/ecma402/#sec-findboundary)
+Ship the same versioned tokenization rules and Unicode boundary data in every build, and expose their combined revision as `segmentationVersion`. Do not make output decisions depend on the host's default locale or unpinned `Intl.Segmenter` behavior. The ECMAScript specification allows implementation-dependent segmentation, so a shared seed alone does not establish identical output across runtimes. [ECMAScript boundary determination](https://tc39.es/ecma402/#sec-findboundary)
 
-Specify normalization-free UTF-8 encoding and an unambiguous field serialization for random-decision keys. Sort stable ASCII rule and entry IDs by code-unit order, not locale-sensitive collation. Version changes to segmentation data, existing-expression recognition, and sentence ownership. Run the same Unicode and seeded-output fixtures in the browser and server runtimes. Unicode boundaries protect original sequences; they do not authorize normalizing those sequences.
+Specify normalization-free UTF-8 encoding and an unambiguous field serialization for random-decision keys. Sort stable ASCII rule and entry IDs by code-unit order, not locale-sensitive collation. Version changes to segmentation data, existing-expression recognition, and sentence ownership. Run the same Unicode and seeded-output fixtures in Node and Chromium. Unicode boundaries protect original sequences; they do not authorize normalizing those sequences.
 
 The browser's optional shuffle control changes the seed. Re-rendering the same input must not silently choose new decorations. Return the resolved seed and versions with each result so a saved configuration can reproduce it when those versions are available.
 
@@ -214,7 +214,7 @@ Known stylized-word and existing-ending rules reduce accidental amplification, b
 
 ## Optional change report
 
-With `diagnostics: true`, include a `diagnostics` object alongside `text` and `meta`. The library and HTTP adapter use the same shape; omit it by default. This supports development, example review, and optional change highlighting without exposing implementation details in the normal converter flow.
+With `diagnostics: true`, include a `diagnostics` object alongside `text` and `meta`; omit it by default. This supports development, example review, optional change highlighting, and the plugin's `/uwu-why` command without exposing implementation details in the normal converter flow.
 
 - `changes`: final replacements and insertions with `inputStart`, `inputEnd`, `outputStart`, `outputEnd`, `before`, `after`, and ordered `ruleIds`. Use half-open UTF-16 ranges. For insertions, the input range is empty. Combine multiple passes on one source token into one final change, and coalesce insertions at the same source position in rendered order.
 - `protectedSpans`: source `inputStart`/`inputEnd` ranges and `reasonCodes`, such as `url`, `code`, `quoted_text`, `preserve_term`, or `existing_expression`. Overlapping recognizers produce a merged span with all applicable reasons.
@@ -223,7 +223,7 @@ With `diagnostics: true`, include a `diagnostics` object alongside `text` and `m
 
 Report offsets into the unmodified original input and final output, and keep all endpoints outside grapheme-cluster interiors. Resolve overlapping recognition at word edges conservatively before editing. The report should make it possible to explain both `really → w-weawwy` and why no emoticon was added to a sentence. Tests must also verify that diagnostics on/off produce identical text and reproducibility metadata.
 
-## Shared library, browser, and API
+## Shared engine, browser, and plugin
 
 Expose a pure synchronous core function:
 
@@ -231,33 +231,13 @@ Expose a pure synchronous core function:
 convert(text: string, options?: ConversionOptions): ConversionResult
 ```
 
-It should have no DOM, network, clock, environment-randomness, or storage dependencies. Supply versioned data with the build. Browser and server adapters call the same function and use the same resolved defaults.
+It should have no DOM, network, clock, environment-randomness, or storage dependencies. Supply versioned data with the build. The browser app and the Vencord plugin call the same function and use the same resolved defaults.
 
 The browser interface needs input and output text areas, UwU/nya selection, an intensity control, optional expression controls, copy output, and a shuffle action. Advanced controls include quoted-text conversion, words/full nya spelling, and decoration combinations. Keep optional change highlighting separate from the normal output. Retain the original input. Once assets are loaded, conversion should work locally without a server request. Debounce live previews for larger input and consider a worker if profiling shows a responsiveness problem.
 
 Render strings as text, including faces containing `<`, `>`, `*`, or backslashes. Avoid HTML interpretation. Clipboard content is the raw converted text, not renderer escape sequences.
 
-The HTTP endpoint is `POST /v1/convert` with `Content-Type: application/json`:
-
-```json
-{
-  "text": "Hello world!",
-  "options": {
-    "style": "uwu",
-    "intensity": "light",
-    "seed": "demo",
-    "rates": {
-      "stutter": 0,
-      "stretch": 0,
-      "tilde": 0,
-      "nya": 0,
-      "emoticon": 0
-    }
-  }
-}
-```
-
-The response and library result share this shape. Version values below illustrate the planned initial release:
+The result has this shape:
 
 ```json
 {
@@ -272,19 +252,7 @@ The response and library result share this shape. Version values below illustrat
 }
 ```
 
-Accept empty input and return empty output. Set an initial shared limit of 100,000 Unicode code points of input; also cap the HTTP request body at 1 MiB. Reject unpaired UTF-16 surrogates rather than silently replacing characters. Do not coerce numbers, arrays, or objects into strings.
-
-Use a structured error object with `error.code`, `error.message`, and an optional `error.field`. The core throws a typed validation error; the HTTP adapter maps it to the following statuses:
-
-| Status | Meaning |
-|---|---|
-| `200` | Conversion succeeded, including an empty string. |
-| `400` | Malformed JSON, missing `text`, wrong input type, or invalid Unicode scalar sequence. |
-| `413` | Input or request body exceeds its limit. |
-| `415` | Unsupported request content type. |
-| `422` | Invalid, unknown, or conflicting options. |
-
-This specifies an adapter contract, not a hosting choice. Authentication, deployment, and application-specific quotas can be added when an API consumer is selected.
+Accept empty input and return empty output. Set an initial limit of 100,000 Unicode code points of input. Reject unpaired UTF-16 surrogates rather than silently replacing characters. Do not coerce numbers, arrays, or objects into strings. Invalid input or options throw a typed `ConversionError` with a `code`, a `message`, and an optional `field`.
 
 ## Acceptance examples
 
@@ -315,7 +283,7 @@ All examples in this table have all expression rates set to zero. Exact and beha
 
 The [40-case review collection](converter-examples.md) expands these into ordinary conversation, expression combinations, difficult attribution, technical text, existing UwU speech, and Unicode cases. Maintain it alongside the rules. Exact cases become automated fixtures; acceptable-output cases also require human review because passing a spelling test does not establish natural usage.
 
-Add implementation checks for exact whitespace and CRLF preservation, empty input, protected code and links, Unicode faces, quote/apostrophe boundaries, option validation, spelling overrides, and identical browser/API results. Force expression rates to 0 or 1 and use fixed seeds to test budgets, eligibility, non-repetition, combination accounting, existing-face ownership, and insertion placement without flaky probability assertions. Include precomposed/decomposed text, emoji modifiers and joiners, and diagnostics offsets.
+Add implementation checks for exact whitespace and CRLF preservation, empty input, protected code and links, Unicode faces, quote/apostrophe boundaries, option validation, spelling overrides, and identical Node/Chromium results. Force expression rates to 0 or 1 and use fixed seeds to test budgets, eligibility, non-repetition, combination accounting, existing-face ownership, and insertion placement without flaky probability assertions. Include precomposed/decomposed text, emoji modifiers and joiners, and diagnostics offsets.
 
 Check semantic mismatches as well as spelling: `not happy` must not produce joy, a routine question must not imply confusion, an apology must not gain a wink through automatic selection, and a sad cat-related sentence must not receive a playful nya ending.
 
@@ -326,6 +294,6 @@ Measure latency and output growth on representative short messages and the maxim
 1. Turn exact cases from the review collection into fixtures; add versioned vocabulary, protected-span tokenization, and deterministic spelling conversion.
 2. Implement seeded expression, the initial intent rules, and optional diagnostics; enable dictionary entries only as their eligibility rules become available.
 3. Add the browser interface, verify acceptance cases, and review actual outputs for readability, intended tone, and appropriate emoticon use.
-4. Add the HTTP adapter when API access is needed, using the same core and fixtures.
+4. Bundle the same core into the Vencord plugin, with the same fixtures.
 
 Keep initial work focused on English plain-text conversion. Additional dialects, custom dictionaries, structured document parsing, and contextual generative rewriting can be considered after the base behavior is reviewed.

@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "A local-first UwU and nya text converter with a shared browser and API engine.",
+  "description": "UwUSpeak: a Vencord plugin that converts your Discord messages to UwU or nya speak.",
   "license": "MIT",
   "author": "MagicCat3022",
   "repository": {
@@ -11,26 +11,19 @@
     "url": "git+https://github.com/MagicCat3022/UwU_Speak.git"
   },
   "homepage": "https://github.com/MagicCat3022/UwU_Speak#readme",
-  "exports": {
-    ".": {
-      "types": "./dist/types/src/core/index.d.ts",
-      "import": "./dist/library/index.js"
-    }
-  },
   "engines": {
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "dev:api": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && vite build && node scripts/build.mjs && tsc -p tsconfig.library.json",
-    "start": "node dist/server.mjs",
-    "test": "tsx --test tests/core.test.ts tests/api.test.ts tests/installer.test.mjs",
-    "test:browser": "playwright test",
+    "test": "tsx --test tests/core.test.ts tests/installer.test.mjs",
     "check": "npm run typecheck && npm test",
+    "web": "vite --config web/vite.config.ts",
+    "web:build": "vite build --config web/vite.config.ts",
+    "web:preview": "vite preview --config web/vite.config.ts",
+    "test:browser": "playwright test --config web/playwright.config.ts",
     "test:all": "npm run check && npm run test:browser",
-    "format": "prettier --write src tests scripts install/installer.mjs index.html package.json vite.config.ts playwright.config.ts tsconfig*.json .prettierrc.json",
+    "format": "prettier --write src tests scripts install/installer.mjs web package.json tsconfig.json .prettierrc.json",
     "benchmark": "tsx scripts/benchmark.ts",
     "vencord:build": "node scripts/build-vencord.mjs",
     "vencord:install": "node scripts/build-vencord.mjs --install ../Vencord",

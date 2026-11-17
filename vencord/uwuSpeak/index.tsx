@@ -1,14 +1,17 @@
 import { ChatBarButton, ChatBarButtonFactory } from "@api/ChatButtons";
 import { ApplicationCommandInputType, ApplicationCommandOptionType, findOption, sendBotMessage } from "@api/Commands";
+import { plugins } from "@api/PluginManager";
+import { openPluginModal } from "@components/settings";
 import { sendMessage } from "@utils/discord";
 import { Logger } from "@utils/Logger";
 import definePlugin, { IconComponent } from "@utils/types";
-import { FluxDispatcher, MessageActions, PendingReplyStore, UserStore } from "@webpack/common";
+import { ContextMenuApi, FluxDispatcher, Menu, MessageActions, PendingReplyStore, UserStore } from "@webpack/common";
 
-import { buildOptions, moodText, Overrides, uwuify } from "./convert";
+import { buildOptions, escapeFaces, moodText, Overrides, uwuifyForDiscord } from "./convert";
 import { convert, type Intensity, miniLmCutoff, type Style } from "./engine";
 import { detectMoods, moodStatus, topScores, unloadMoodModel } from "./mood";
 import { settings } from "./settings";
+import managedStyle from "./style.css?managed";
 import { newerRelease, startUpdateChecks, stopUpdateChecks, updateCommand } from "./update";
 import { VERSION } from "./version";
 
@@ -34,7 +37,7 @@ const maxLength = () => UserStore.getCurrentUser()?.premiumType === 2 ? 4000 : 2
 /** Converts text, or explains why it could not and returns undefined. */
 function tryUwuify(channelId: string, text: string, overrides?: Overrides): string | undefined {
     try {
-        const result = uwuify(text, overrides);
+        const result = uwuifyForDiscord(text, overrides);
         if (result.length > maxLength()) {
             notify(channelId, "The UwU version is too long for Discord, so your message was sent unconverted.");
             return;
@@ -89,22 +92,26 @@ async function explain(channelId: string, text: string): Promise<string> {
     const moods = await moodsFor(channelId, text);
     const top = modelOn && prose ? await topScores(prose).catch(() => undefined) : undefined;
 
-    const lines = [
-        `**Mood model:** ${modelOn ? moodStatus() : "off (turn on \"Mood model\" with faces on and face mood set to Auto)"}`,
-    ];
-    if (top) lines.push(`**Model's top labels:** ${top.map(s => `${s.label} ${Math.round(s.score * 100)}%`).join(", ")}`);
+    const lines = [`**Mood model:** ${modelOn ? moodStatus() : "off"}`];
+    if (!modelOn) lines.push("-# Turn on \"Mood model\" with faces on and face mood set to \"Detect from message\".");
+    if (top) lines.push(`-# Top labels: ${top.map(s => `${s.label} ${Math.round(s.score * 100)}%`).join(" · ")}`);
     if (modelOn)
-        lines.push(`**Moods it adds:** ${moods.join(", ") || `none (it needs a positive mood at ${miniLmCutoff * 100}% or more that beats neutral)`}`);
+        lines.push(`-# Moods it adds: ${moods.join(", ") || `none (it needs a positive mood at ${miniLmCutoff * 100}% or more that beats neutral)`}`);
 
     const result = convert(text, { ...buildOptions(text, { detectedIntents: moods }), diagnostics: true });
-    lines.push(`**Face chance per fitting sentence:** ${Math.round(faceChance() * 100)}%`);
+    lines.push("", `**Faces** · ${Math.round(faceChance() * 100)}% chance per fitting sentence`);
+    let lastSentence: number | undefined;
     for (const d of result.diagnostics?.decisions ?? []) {
         if (d.ruleId !== "emoticon" && d.ruleId !== "ending") continue;
-        const sentence = text.slice(d.inputStart, d.inputEnd).trim();
-        const mood = d.intent ? ` (mood: ${d.intent.replaceAll("_", " ")})` : "";
-        lines.push(`- "${sentence.slice(0, 80)}"${mood}: ${faceReasons[d.reasonCode] ?? d.reasonCode}`);
+        if (d.inputStart !== lastSentence) {
+            const sentence = text.slice(d.inputStart, d.inputEnd).replace(/\s+/g, " ").trim();
+            lines.push(`> ${sentence.length > 80 ? `${sentence.slice(0, 79)}…` : sentence}`);
+            lastSentence = d.inputStart;
+        }
+        const reason = `${faceReasons[d.reasonCode] ?? d.reasonCode}${d.intent ? ` (mood: ${d.intent.replaceAll("_", " ")})` : ""}`;
+        lines.push(d.outcome === "selected" ? `**${reason}**` : reason);
     }
-    lines.push(`**One possible result:** ${result.text}`);
+    lines.push("", "**One possible result**", escapeFaces(result));
     return lines.join("\n");
 }
 
@@ -137,41 +144,91 @@ function sendAsUwu(channelId: string, button: HTMLElement) {
     }));
 }
 
+const choice = (label: string, value: string) => ({ name: label, label, value });
+const styleChoices = [choice("UwU", "uwu"), choice("Nya", "nya")];
+const intensityChoices = [choice("Light", "light"), choice("Medium", "medium"), choice("Heavy", "heavy")];
+
+function QuickMenu() {
+    const s = settings.use(["autoConvert", "style", "intensity"]);
+    return (
+        <Menu.Menu
+            navId="vc-uwuspeak-menu"
+            onClose={() => FluxDispatcher.dispatch({ type: "CONTEXT_MENU_CLOSE" })}
+            aria-label="UwUSpeak options"
+        >
+            <Menu.MenuCheckboxItem
+                id="vc-uwuspeak-auto"
+                label="Auto UwU (convert every message)"
+                checked={s.autoConvert}
+                action={() => { s.autoConvert = !s.autoConvert; }}
+            />
+            <Menu.MenuSeparator />
+            <Menu.MenuGroup label="Style">
+                {styleChoices.map(({ label, value }) => (
+                    <Menu.MenuRadioItem
+                        key={value}
+                        id={`vc-uwuspeak-style-${value}`}
+                        group="vc-uwuspeak-style"
+                        label={label}
+                        checked={s.style === value}
+                        action={() => { s.style = value; }}
+                    />
+                ))}
+            </Menu.MenuGroup>
+            <Menu.MenuGroup label="Intensity">
+                {intensityChoices.map(({ label, value }) => (
+                    <Menu.MenuRadioItem
+                        key={value}
+                        id={`vc-uwuspeak-intensity-${value}`}
+                        group="vc-uwuspeak-intensity"
+                        label={label}
+                        checked={s.intensity === value}
+                        action={() => { s.intensity = value; }}
+                    />
+                ))}
+            </Menu.MenuGroup>
+            <Menu.MenuSeparator />
+            <Menu.MenuItem
+                id="vc-uwuspeak-settings"
+                label="All settings"
+                action={() => openPluginModal(plugins.UwUSpeak)}
+            />
+        </Menu.Menu>
+    );
+}
+
 const SendAsUwuButton: ChatBarButtonFactory = ({ isAnyChat, isEmpty, channel }) => {
     const { autoConvert, showChatBarButton } = settings.use(["autoConvert", "showChatBarButton"]);
     if (!isAnyChat || !showChatBarButton) return null;
 
     // The highlighted icon and tooltip show the current state.
-    const toggle = () => { settings.store.autoConvert = !autoConvert; };
-
     return (
         <ChatBarButton
             tooltip={autoConvert
-                ? "Auto UwU is on (right-click to turn off)"
-                : "Send as UwU (right-click: convert every message)"}
+                ? "Auto UwU is on (right-click for options)"
+                : "Send as UwU (right-click for options)"}
             onClick={e => {
-                if (e.shiftKey) return toggle();
+                if (e.shiftKey) {
+                    settings.store.autoConvert = !autoConvert;
+                    return;
+                }
                 if (isEmpty) return;
                 sendAsUwu(channel.id, e.currentTarget as HTMLElement);
             }}
-            onContextMenu={e => {
-                e.preventDefault();
-                toggle();
-            }}
+            onContextMenu={e => ContextMenuApi.openContextMenu(e, () => <QuickMenu />)}
         >
             <UwuIcon style={autoConvert ? { color: "var(--text-brand, var(--brand-500))" } : undefined} />
         </ChatBarButton>
     );
 };
 
-const choice = (label: string, value: string) => ({ name: label, label, value });
-
 export default definePlugin({
     name: "UwUSpeak",
     description: "Convert your messages to UwU or nya speak with /uwu, a \"Send as UwU\" chat bar button, or automatically.",
     tags: ["Chat", "Fun"],
-    authors: [{ name: "Magic", id: 0n }],
+    authors: [{ name: "MagicCat3022", id: 297550393435488257n }],
     settings,
+    managedStyle,
 
     chatBarButton: {
         icon: UwuIcon,
@@ -243,13 +300,13 @@ export default definePlugin({
                 name: "style",
                 description: "Dialect (defaults to your plugin settings)",
                 type: ApplicationCommandOptionType.STRING,
-                choices: [choice("UwU", "uwu"), choice("Nya", "nya")],
+                choices: styleChoices,
             },
             {
                 name: "intensity",
                 description: "Strength (defaults to your plugin settings)",
                 type: ApplicationCommandOptionType.STRING,
-                choices: [choice("Light", "light"), choice("Medium", "medium"), choice("Heavy", "heavy")],
+                choices: intensityChoices,
             },
             {
                 name: "preview",
@@ -267,7 +324,7 @@ export default definePlugin({
             if (text === undefined) return;
 
             if (findOption(args, "preview", false)) {
-                sendBotMessage(channel.id, { content: text });
+                notify(channel.id, text);
                 return;
             }
             const reply = PendingReplyStore.getPendingReply(channel.id);

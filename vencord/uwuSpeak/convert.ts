@@ -1,4 +1,4 @@
-import { type ConversionOptions, convert, type Intensity, type Style } from "./engine";
+import { type ConversionOptions, type ConversionResult, convert, type Intensity, type Style } from "./engine";
 import { settings } from "./settings";
 
 // Discord syntax the engine does not know about: user/role/channel mentions, custom emoji,
@@ -10,6 +10,7 @@ export interface Overrides {
     intensity?: Intensity;
     /** Moods from the optional model; they only fill in sentences the keyword rules find neutral. */
     detectedIntents?: string[];
+    seed?: string;
 }
 
 /** The prose a mood model should read: no mentions, emoji, links or code. */
@@ -31,7 +32,7 @@ export function buildOptions(text: string, overrides: Overrides = {}): Conversio
     const options: ConversionOptions = {
         style,
         intensity: overrides.intensity ?? s.intensity as Intensity,
-        seed: s.seed || Math.random().toString(36).slice(2),
+        seed: overrides.seed ?? (s.seed || Math.random().toString(36).slice(2)),
         quotedText: s.quotedText as "preserve" | "convert",
         preserveTerms: [...new Set(preserveTerms)].slice(0, 256),
         emoticons: {
@@ -68,7 +69,29 @@ export function buildOptions(text: string, overrides: Overrides = {}): Conversio
     };
 }
 
+/** Converts text for display as plain text. */
 export function uwuify(text: string, overrides?: Overrides): string {
     if (!text.trim()) return text;
     return convert(text, buildOptions(text, overrides)).text;
+}
+
+/** Converts text for sending as a Discord message. */
+export function uwuifyForDiscord(text: string, overrides?: Overrides): string {
+    if (!text.trim()) return text;
+    return escapeFaces(convert(text, { ...buildOptions(text, overrides), diagnostics: true }));
+}
+
+/**
+ * Discord reads markdown inside faces such as m(_ _)m or ¯\_(ツ)_/¯, so the characters it would
+ * consume are escaped in the faces the engine added. The result needs diagnostics; they keep the
+ * first 2,000 records in input order, and a face past that point stays unescaped.
+ */
+export function escapeFaces({ text, diagnostics }: ConversionResult): string {
+    let escaped = "", cursor = 0;
+    for (const change of diagnostics?.changes ?? []) {
+        if (!change.ruleIds.some(id => id.startsWith("emoticon:"))) continue;
+        escaped += text.slice(cursor, change.outputStart) + change.after.replace(/[\\*_~|`]/g, "\\$&");
+        cursor = change.outputEnd;
+    }
+    return escaped + text.slice(cursor);
 }

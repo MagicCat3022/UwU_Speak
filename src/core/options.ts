@@ -5,7 +5,6 @@ export class ConversionError extends Error {
   constructor(
     public code: string,
     message: string,
-    public status = 422,
     public field?: string,
   ) {
     super(message);
@@ -17,7 +16,7 @@ export const intents = [...new Set(dictionary.entries.flatMap((e) => e.intents))
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 function fail(field: string, message: string): never {
-  throw new ConversionError('INVALID_OPTIONS', message, 422, field);
+  throw new ConversionError('INVALID_OPTIONS', message, field);
 }
 function keys(value: unknown, allowed: string[], field: string): Record<string, unknown> {
   if (!record(value)) fail(field, `${field} must be an object.`);
@@ -27,7 +26,7 @@ function keys(value: unknown, allowed: string[], field: string): Record<string, 
 }
 export function validateText(text: unknown): asserts text is string {
   if (typeof text !== 'string')
-    throw new ConversionError('INVALID_TEXT', 'text must be a string.', 400, 'text');
+    throw new ConversionError('INVALID_TEXT', 'text must be a string.', 'text');
   let count = 0;
   for (let i = 0; i < text.length; i++, count++) {
     const unit = text.charCodeAt(i);
@@ -37,21 +36,14 @@ export function validateText(text: unknown): asserts text is string {
         throw new ConversionError(
           'INVALID_UNICODE',
           'text contains an unpaired surrogate.',
-          400,
           'text',
         );
     } else if (unit >= 0xdc00 && unit <= 0xdfff)
-      throw new ConversionError(
-        'INVALID_UNICODE',
-        'text contains an unpaired surrogate.',
-        400,
-        'text',
-      );
+      throw new ConversionError('INVALID_UNICODE', 'text contains an unpaired surrogate.', 'text');
     if (count >= MAX_INPUT)
       throw new ConversionError(
         'INPUT_TOO_LARGE',
         `text exceeds ${MAX_INPUT.toLocaleString('en-US')} code points.`,
-        413,
         'text',
       );
   }

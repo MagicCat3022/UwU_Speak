@@ -2,6 +2,7 @@ import { definePluginSettings } from "@api/Settings";
 import { OptionType } from "@utils/types";
 
 import { intents } from "./engine";
+import { TryItSetting } from "./preview";
 
 const title = (s: string) => s.replaceAll("_", " ").replace(/^./, c => c.toUpperCase());
 const rate = (description: string, value: number) => ({
@@ -14,9 +15,13 @@ const rate = (description: string, value: number) => ({
 
 // Advanced defaults mirror the engine's medium preset; they only apply while "customize" is on.
 export const settings = definePluginSettings({
+    tryIt: {
+        type: OptionType.COMPONENT,
+        component: TryItSetting,
+    },
     autoConvert: {
         type: OptionType.BOOLEAN,
-        description: "Convert every message you send. Right-click the chat bar button to toggle this quickly.",
+        description: "Convert every message you send. Shift+click the chat bar button or use its right-click menu to toggle this quickly.",
         default: false,
     },
     showChatBarButton: {

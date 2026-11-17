@@ -13,22 +13,20 @@ var vocabulary_default = {
 
 // src/core/options.ts
 var ConversionError = class extends Error {
-  constructor(code, message, status = 422, field) {
+  constructor(code, message, field) {
     super(message);
     this.code = code;
-    this.status = status;
     this.field = field;
     this.name = "ConversionError";
   }
   code;
-  status;
   field;
 };
 var MAX_INPUT = 1e5;
 var intents = [...new Set(emoticons_default.entries.flatMap((e) => e.intents))].sort();
 var record = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 function fail(field, message) {
-  throw new ConversionError("INVALID_OPTIONS", message, 422, field);
+  throw new ConversionError("INVALID_OPTIONS", message, field);
 }
 function keys(value, allowed, field) {
   if (!record(value)) fail(field, `${field} must be an object.`);
@@ -38,7 +36,7 @@ function keys(value, allowed, field) {
 }
 function validateText(text) {
   if (typeof text !== "string")
-    throw new ConversionError("INVALID_TEXT", "text must be a string.", 400, "text");
+    throw new ConversionError("INVALID_TEXT", "text must be a string.", "text");
   let count = 0;
   for (let i = 0; i < text.length; i++, count++) {
     const unit = text.charCodeAt(i);
@@ -48,21 +46,14 @@ function validateText(text) {
         throw new ConversionError(
           "INVALID_UNICODE",
           "text contains an unpaired surrogate.",
-          400,
           "text"
         );
     } else if (unit >= 56320 && unit <= 57343)
-      throw new ConversionError(
-        "INVALID_UNICODE",
-        "text contains an unpaired surrogate.",
-        400,
-        "text"
-      );
+      throw new ConversionError("INVALID_UNICODE", "text contains an unpaired surrogate.", "text");
     if (count >= MAX_INPUT)
       throw new ConversionError(
         "INPUT_TOO_LARGE",
         `text exceeds ${MAX_INPUT.toLocaleString("en-US")} code points.`,
-        413,
         "text"
       );
   }
